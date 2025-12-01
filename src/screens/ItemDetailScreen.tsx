@@ -1,0 +1,249 @@
+import React, { useState } from "react";
+import { View, Text, Pressable, ScrollView, Image, TextInput, Modal } from "react-native";
+import { useCollectionStore } from "../state/collectionStore";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RouteProp } from "@react-navigation/native";
+import { RootStackParamList } from "../navigation/RootNavigator";
+
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, "ItemDetail">;
+  route: RouteProp<RootStackParamList, "ItemDetail">;
+};
+
+export default function ItemDetailScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
+  const { itemId, collectionId } = route.params;
+
+  const item = useCollectionStore((s) => s.getItem(itemId));
+  const updateItem = useCollectionStore((s) => s.updateItem);
+
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteText, setNoteText] = useState("");
+
+  if (!item) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <Ionicons name="alert-circle-outline" size={64} color="#DC2626" />
+        <Text className="text-gray-900 text-lg font-semibold mt-4">Item not found</Text>
+        <Pressable onPress={() => navigation.goBack()} className="mt-4">
+          <Text className="text-blue-600 text-base">Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const openNoteModal = (index: number) => {
+    setSelectedPhotoIndex(index);
+    setNoteText(item.photos[index].conditionNotes || "");
+    setShowNoteModal(true);
+  };
+
+  const saveNote = () => {
+    if (selectedPhotoIndex !== null) {
+      const updatedPhotos = [...item.photos];
+      updatedPhotos[selectedPhotoIndex] = {
+        ...updatedPhotos[selectedPhotoIndex],
+        conditionNotes: noteText.trim(),
+      };
+      updateItem(itemId, { photos: updatedPhotos });
+    }
+    setShowNoteModal(false);
+    setNoteText("");
+    setSelectedPhotoIndex(null);
+  };
+
+  return (
+    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+      {/* Header */}
+      <View className="bg-white px-6 py-4 border-b border-gray-200">
+        <View className="flex-row items-center">
+          <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </Pressable>
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-gray-900">{item.title}</Text>
+            <Text className="text-sm text-gray-500">{item.id}</Text>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+        {/* Photos */}
+        <View className="bg-white rounded-2xl p-4 mb-4">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">Photos ({item.photos.length})</Text>
+          {item.photos.length > 0 ? (
+            <View className="flex-row flex-wrap gap-2">
+              {item.photos.map((photo, index) => (
+                <Pressable
+                  key={photo.id}
+                  onPress={() => openNoteModal(index)}
+                  className="relative"
+                >
+                  <Image source={{ uri: photo.uri }} style={{ width: 100, height: 100 }} className="rounded-xl" />
+                  {photo.conditionNotes && (
+                    <View className="absolute top-2 right-2 w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
+                      <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                    </View>
+                  )}
+                  <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded">
+                    <Text className="text-white text-xs">{index + 1}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <Text className="text-gray-400 text-center py-4">No photos</Text>
+          )}
+        </View>
+
+        {/* Item Details */}
+        <View className="bg-white rounded-2xl p-4 mb-4">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">Item Details</Text>
+
+          {item.artistName && (
+            <View className="mb-3">
+              <Text className="text-sm text-gray-500 mb-1">Artist</Text>
+              <Text className="text-base text-gray-900">{item.artistName}</Text>
+            </View>
+          )}
+
+          {item.description && (
+            <View className="mb-3">
+              <Text className="text-sm text-gray-500 mb-1">Description</Text>
+              <Text className="text-base text-gray-900">{item.description}</Text>
+            </View>
+          )}
+
+          <View className="mb-3">
+            <Text className="text-sm text-gray-500 mb-1">Dimensions</Text>
+            <Text className="text-base text-gray-900">
+              {item.dimensions.length} × {item.dimensions.width} × {item.dimensions.height} {item.dimensions.unit}
+            </Text>
+          </View>
+
+          {item.dimensions.weight && (
+            <View className="mb-3">
+              <Text className="text-sm text-gray-500 mb-1">Weight</Text>
+              <Text className="text-base text-gray-900">
+                {item.dimensions.weight} {item.dimensions.weightUnit}
+              </Text>
+            </View>
+          )}
+
+          <View className="mb-3">
+            <Text className="text-sm text-gray-500 mb-1">Estimated Value</Text>
+            <Text className="text-base text-gray-900">
+              {item.currency} {item.estimatedValue.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Condition Report */}
+        <View className="bg-white rounded-2xl p-4 mb-4">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">Condition Report</Text>
+
+          <View className="mb-3">
+            <Text className="text-sm text-gray-500 mb-2">Overall Condition</Text>
+            <View
+              className={`self-start px-4 py-2 rounded-xl ${
+                item.overallCondition === "Excellent"
+                  ? "bg-green-100"
+                  : item.overallCondition === "Good"
+                  ? "bg-blue-100"
+                  : item.overallCondition === "Fair"
+                  ? "bg-yellow-100"
+                  : "bg-red-100"
+              }`}
+            >
+              <Text
+                className={`text-base font-semibold ${
+                  item.overallCondition === "Excellent"
+                    ? "text-green-700"
+                    : item.overallCondition === "Good"
+                    ? "text-blue-700"
+                    : item.overallCondition === "Fair"
+                    ? "text-yellow-700"
+                    : "text-red-700"
+                }`}
+              >
+                {item.overallCondition}
+              </Text>
+            </View>
+          </View>
+
+          {item.conditionNotes && (
+            <View>
+              <Text className="text-sm text-gray-500 mb-1">General Notes</Text>
+              <Text className="text-base text-gray-900">{item.conditionNotes}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Photo-Specific Notes */}
+        {item.photos.some((p) => p.conditionNotes) && (
+          <View className="bg-white rounded-2xl p-4 mb-4">
+            <Text className="text-lg font-semibold text-gray-900 mb-3">Photo Notes</Text>
+            {item.photos.map((photo, index) =>
+              photo.conditionNotes ? (
+                <View key={photo.id} className="mb-3 pb-3 border-b border-gray-100 last:border-b-0">
+                  <Text className="text-sm text-gray-500 mb-1">Photo {index + 1}</Text>
+                  <Text className="text-base text-gray-900">{photo.conditionNotes}</Text>
+                </View>
+              ) : null
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Note Modal */}
+      <Modal visible={showNoteModal} animationType="slide" transparent>
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white rounded-t-3xl p-6" style={{ paddingBottom: insets.bottom + 24 }}>
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-xl font-bold text-gray-900">
+                Photo {selectedPhotoIndex !== null ? selectedPhotoIndex + 1 : ""} Note
+              </Text>
+              <Pressable onPress={() => setShowNoteModal(false)} className="active:opacity-70">
+                <Ionicons name="close" size={28} color="#111827" />
+              </Pressable>
+            </View>
+
+            {selectedPhotoIndex !== null && (
+              <Image
+                source={{ uri: item.photos[selectedPhotoIndex].uri }}
+                style={{ width: "100%", height: 200 }}
+                className="rounded-xl mb-4"
+              />
+            )}
+
+            <Text className="text-sm text-gray-600 mb-3">
+              Describe any damage, wear, or notable features visible in this photo
+            </Text>
+
+            <TextInput
+              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+              placeholder="e.g., Small scratch on upper left corner..."
+              placeholderTextColor="#9CA3AF"
+              value={noteText}
+              onChangeText={setNoteText}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              autoFocus
+            />
+
+            <Pressable
+              onPress={saveNote}
+              className="bg-blue-600 rounded-xl py-4 items-center active:bg-blue-700"
+            >
+              <Text className="text-white text-base font-semibold">Save Note</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}

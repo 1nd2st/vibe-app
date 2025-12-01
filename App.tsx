@@ -1,12 +1,22 @@
 import { StatusBar } from "expo-status-bar";
-import { Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { RootStackParamList } from "./src/navigation/RootNavigator";
+
+// Screens
+import CollectionsScreen from "./src/screens/CollectionsScreen";
+import NewCollectionScreen from "./src/screens/NewCollectionScreen";
+import CollectionDetailScreen from "./src/screens/CollectionDetailScreen";
+import AddItemScreen from "./src/screens/AddItemScreen";
+import CameraScreen from "./src/screens/CameraScreen";
+import ItemDetailScreen from "./src/screens/ItemDetailScreen";
+import SignCollectionScreen from "./src/screens/SignCollectionScreen";
 
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
-There are already environment keys in the project. 
+There are already environment keys in the project.
 Before telling the user to add them, check if you already have access to the required keys through bash.
 Directly access them with process.env.${key}
 
@@ -25,18 +35,44 @@ const openai_api_key = Constants.expoConfig.extra.apikey;
 
 */
 
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
 export default function App() {
   return (
-    <GestureHandlerRootView>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <NavigationContainer>
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-center text-neutral-800 dark:text-neutral-50 text-2xl font-bold pb-2">Vibecode</Text>
-            <Text className="text-center text-gray-500 dark:text-gray-400 text-base font-normal">
-              This screen will be replaced when the AI agent is done.
-            </Text>
-            <StatusBar style="auto" />
-          </View>
+          <Stack.Navigator
+            screenOptions={{
+              headerShown: false,
+              animation: "default",
+            }}
+          >
+            <Stack.Screen name="Collections" component={CollectionsScreen} />
+            <Stack.Screen
+              name="NewCollection"
+              component={NewCollectionScreen}
+              options={{ presentation: "modal" }}
+            />
+            <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+            <Stack.Screen
+              name="AddItem"
+              component={AddItemScreen}
+              options={{ presentation: "modal" }}
+            />
+            <Stack.Screen
+              name="Camera"
+              component={CameraScreen}
+              options={{ presentation: "fullScreenModal" }}
+            />
+            <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
+            <Stack.Screen
+              name="SignCollection"
+              component={SignCollectionScreen}
+              options={{ presentation: "modal" }}
+            />
+          </Stack.Navigator>
+          <StatusBar style="auto" />
         </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>
