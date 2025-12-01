@@ -14,6 +14,8 @@ import CollectionDetailScreen from "./src/screens/CollectionDetailScreen";
 import AddItemScreen from "./src/screens/AddItemScreen";
 import CameraScreen from "./src/screens/CameraScreen";
 import ItemDetailScreen from "./src/screens/ItemDetailScreen";
+import PhotoAnnotationScreen from "./src/screens/PhotoAnnotationScreen";
+import QRCodeDisplayScreen from "./src/screens/QRCodeDisplayScreen";
 import SignCollectionScreen from "./src/screens/SignCollectionScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
 import QRScannerScreen from "./src/screens/QRScannerScreen";
@@ -73,6 +75,16 @@ export default function App() {
               options={{ presentation: "fullScreenModal" }}
             />
             <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
+            <Stack.Screen
+              name="PhotoAnnotation"
+              component={PhotoAnnotationScreen}
+              options={{ presentation: "fullScreenModal" }}
+            />
+            <Stack.Screen
+              name="QRCodeDisplay"
+              component={QRCodeDisplayScreen}
+              options={{ presentation: "modal" }}
+            />
             <Stack.Screen
               name="SignCollection"
               component={SignCollectionScreen}

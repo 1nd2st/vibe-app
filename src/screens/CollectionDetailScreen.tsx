@@ -357,7 +357,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
 
               <Pressable
                 onPress={handleEmailReport}
-                className="flex-row items-center p-4 bg-green-50 rounded-xl active:bg-green-100"
+                className="flex-row items-center p-4 bg-green-50 rounded-xl mb-3 active:bg-green-100"
               >
                 <View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-4">
                   <Ionicons name="mail-outline" size={24} color="#FFFFFF" />
@@ -365,6 +365,23 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                 <View className="flex-1">
                   <Text className="text-base font-semibold text-gray-900">Email Report</Text>
                   <Text className="text-sm text-gray-600">Send collection details via email</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setShowExportMenu(false);
+                  navigation.navigate("QRCodeDisplay", { collectionId });
+                }}
+                className="flex-row items-center p-4 bg-purple-50 rounded-xl active:bg-purple-100"
+              >
+                <View className="w-12 h-12 bg-purple-600 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="qr-code-outline" size={24} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-gray-900">View QR Codes</Text>
+                  <Text className="text-sm text-gray-600">Display QR codes for all items</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
               </Pressable>

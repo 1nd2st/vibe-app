@@ -117,10 +117,19 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                   onPress={() => openNoteModal(index)}
                   className="relative"
                 >
-                  <Image source={{ uri: photo.uri }} style={{ width: 100, height: 100 }} className="rounded-xl" />
+                  <Image
+                    source={{ uri: photo.annotatedUri || photo.uri }}
+                    style={{ width: 100, height: 100 }}
+                    className="rounded-xl"
+                  />
                   {photo.conditionNotes && (
                     <View className="absolute top-2 right-2 w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
                       <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                    </View>
+                  )}
+                  {photo.annotatedUri && (
+                    <View className="absolute top-2 left-2 w-6 h-6 bg-orange-600 rounded-full items-center justify-center">
+                      <Ionicons name="brush" size={12} color="#FFFFFF" />
                     </View>
                   )}
                   <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded">
@@ -247,12 +256,34 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             </View>
 
             {selectedPhotoIndex !== null && (
-              <Image
-                source={{ uri: item.photos[selectedPhotoIndex].uri }}
-                style={{ width: "100%", height: 200 }}
-                className="rounded-xl mb-4"
-              />
+              <View>
+                <Image
+                  source={{ uri: item.photos[selectedPhotoIndex].annotatedUri || item.photos[selectedPhotoIndex].uri }}
+                  style={{ width: "100%", height: 200 }}
+                  className="rounded-xl mb-2"
+                  resizeMode="contain"
+                />
+                {item.photos[selectedPhotoIndex].annotatedUri && (
+                  <Text className="text-xs text-green-600 text-center mb-2">✓ Annotated version shown</Text>
+                )}
+              </View>
             )}
+
+            <Pressable
+              onPress={() => {
+                if (selectedPhotoIndex !== null) {
+                  setShowNoteModal(false);
+                  navigation.navigate("PhotoAnnotation", {
+                    itemId,
+                    photoId: item.photos[selectedPhotoIndex].id,
+                  });
+                }
+              }}
+              className="flex-row items-center justify-center bg-orange-600 rounded-xl py-3 mb-3 active:bg-orange-700"
+            >
+              <Ionicons name="brush" size={20} color="#FFFFFF" />
+              <Text className="text-white text-base font-semibold ml-2">Annotate Photo</Text>
+            </Pressable>
 
             <Text className="text-sm text-gray-600 mb-3">
               Describe any damage, wear, or notable features visible in this photo

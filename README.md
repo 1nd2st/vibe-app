@@ -56,9 +56,15 @@ This app streamlines the collection process for art logistics companies by provi
 - Condition Rating: Excellent, Good, Fair, Poor, or Damaged
 - Each item has unique internal ID for tracking
 
-### 7. **Photo Capture & Condition Reporting (FIXED)**
+### 7. **Photo Capture & Condition Reporting (✅ FULLY FEATURED)**
 - **Fixed camera unmounting bug** - Navigation properly closes both camera and add item screens
 - **No duplicate items** - Items only created once, photos update existing item
+- **Photo Annotation** - Draw on photos with finger to mark damage (like Articheck!)
+  - Multiple colors (Red, Yellow, Green, Blue, White, Black)
+  - Adjustable brush sizes (2px, 3px, 5px, 8px)
+  - Undo and Clear All functions
+  - Annotations saved as separate image files
+  - Orange brush icon indicates annotated photos
 - Built-in camera with flash and flip camera controls
 - Take multiple photos per item
 - Add condition notes specific to each photo
@@ -67,12 +73,17 @@ This app streamlines the collection process for art logistics companies by provi
 - Individual photo deletion
 - **AI Damage Detection**: Automatically or manually analyze photos for damage (GPT-4 Vision or Claude 3.5 Sonnet)
 - AI-generated condition notes clearly marked and editable
+- **Full image view** - resizeMode="contain" ensures complete photo visibility
 
-### 8. **QR Code System (READY FOR IMPLEMENTATION)**
-- Generate unique QR codes for each collection and item
-- Scan QR codes to instantly navigate to collections or items
-- QR codes contain collection/item IDs for external system integration
-- Scanner accessible from main Collections screen
+### 8. **QR Code System (✅ IMPLEMENTED)**
+- **Auto-generated short IDs** ready for QR codes (e.g., "A1234", "A1234-01")
+- **QR Code Display Screen** - Beautiful QR code viewer for items
+- Navigate through multiple items with prev/next buttons
+- Share QR codes as images or share item info as text
+- QR codes include item ID, title, collection reference
+- Access via Export menu in CollectionDetail screen
+- **Print-ready** - Can be captured and printed for labels
+- Scanner accessible from main Collections screen (pre-existing)
 
 ### 9. **Zebra Label Printing (READY FOR IMPLEMENTATION)**
 - Generate ZPL (Zebra Programming Language) code for label printing
@@ -339,7 +350,67 @@ All data is stored locally using AsyncStorage and persists between app sessions.
 
 ## Latest Updates & Fixes (December 2025)
 
-### ✅ COMPLETED FIXES
+### ✅ COMPLETED IMPLEMENTATIONS (Current Session)
+
+#### 1. **Photo Annotation System - IMPLEMENTED** 🎨
+**Status**: Fully functional, production-ready
+
+**Features**:
+- Draw on photos with finger to mark damage locations
+- 6 color options: Red, Yellow, Green, Blue, White, Black
+- 4 brush sizes: 2px, 3px, 5px, 8px
+- Undo last annotation
+- Clear all annotations
+- Annotations saved as separate image files
+- Original photo preserved
+- Orange brush icon indicates annotated photos
+- Accessible from ItemDetail photo modal
+
+**Technical Implementation**:
+- Uses React Native Skia for canvas drawing
+- React Native Gesture Handler for touch gestures
+- View shot capture for saving annotations
+- Annotations stored in `photo.annotatedUri` field
+
+**Files Created/Modified**:
+- Created: `src/screens/PhotoAnnotationScreen.tsx`
+- Modified: `src/screens/ItemDetailScreen.tsx` (added annotate button)
+- Modified: `src/types/collection.ts` (added annotatedUri field)
+- Modified: `App.tsx`, `RootNavigator.tsx` (navigation setup)
+
+#### 2. **QR Code Generation & Display - IMPLEMENTED** 📱
+**Status**: Fully functional, ready for printing
+
+**Features**:
+- Auto-generated short IDs for collections (e.g., "A1234")
+- Auto-generated hierarchical IDs for items (e.g., "A1234-01", "A1234-02")
+- Beautiful QR code display screen
+- Navigate through multiple items
+- Share QR code as image
+- Share item info as text
+- Display item details with QR code
+- Print-ready format
+
+**Technical Implementation**:
+- Uses `react-native-qrcode-svg` for QR generation
+- QR codes encode item displayId for scanning
+- View shot capture for sharing QR images
+- Expo Sharing for export functionality
+
+**Files Created/Modified**:
+- Created: `src/screens/QRCodeDisplayScreen.tsx`
+- Modified: `src/screens/CollectionDetailScreen.tsx` (added QR menu option)
+- Modified: `App.tsx`, `RootNavigator.tsx` (navigation setup)
+- Package: `react-native-qrcode-svg@6.3.20` installed
+
+#### 3. **AI Image Display Fix - COMPLETED** ✓
+**Problem**: Images showing partially in modals
+**Solution**: Added `resizeMode="contain"` to all Image components in modals
+**Files Modified**: `src/screens/ItemDetailScreen.tsx`
+
+---
+
+### ✅ COMPLETED FIXES (Previous Session)
 
 #### 1. **Signature Display Issue - FIXED**
 **Problem**: Signatures were being captured but not displayed on the collection screen after signing.
@@ -437,53 +508,54 @@ These features have the data structures and backend logic ready. UI implementati
 
 ---
 
-### 🎨 PENDING FEATURES (Requested)
+### 🎨 PENDING FEATURES (Next Steps)
 
-#### 1. **Photo Annotation System** (Like Articheck)
+#### 1. **Item CRUD Operations** ⏳
 **What's Needed**:
-- Draw on photos with finger to mark damage locations
-- Multiple annotation layers per photo
-- Color picker for drawing
-- Undo/redo functionality
-- Save annotated images separately
+- Edit item button in ItemDetail screen
+- Edit item form (pre-filled with current data)
+- Delete item with confirmation dialog
+- Read-only enforcement when `collection.status === "signed"`
 
-**Recommended Approach**:
-```typescript
-// Use react-native-skia for drawing
-import { Canvas, Path, Skia } from "@shopify/react-native-skia";
+**Store Methods**: Already exist (`updateItem`, `deleteItem`)
+**Complexity**: Low (1-2 hours)
 
-// Photo annotation screen similar to SignatureScreen
-// - Display photo as background
-// - Overlay Canvas for drawing
-// - Pan gesture for drawing paths
-// - Save final result as new image with annotations
-```
+#### 2. **Customer Location Management UI** ⏳
+**What's Needed**:
+- Location list screen per customer
+- Add/edit/delete location modals
+- Location selector in NewCollection screen
+- Auto-select last used location
+- Location type indicators (pickup/delivery/both)
 
-**Files to Create**:
-- `src/screens/PhotoAnnotationScreen.tsx`
-- Update `ItemPhoto` interface to include `annotatedUri?: string`
-- Add "Annotate" button in photo note modal
-
+**Data Foundation**: Complete (types and store methods ready)
 **Complexity**: Medium (2-3 hours)
 
-#### 2. **AI Image Full View Fix**
-**Problem**: When editing pictures with AI, only part of the picture is visible.
-**Investigation Needed**:
-- Check which screen this occurs on (ItemDetail? Photo modal?)
-- Verify Image component `resizeMode` prop
-- Check container dimensions and aspect ratio handling
+#### 3. **Zebra Label Printing** ⏳
+**What's Needed**:
+- ZPL code generation for Zebra printers
+- Network socket connection to printer
+- Print queue management
+- Label template customization
 
-**Likely Fix**:
-```typescript
-// Ensure full image visibility
-<Image
-  source={{ uri: photo.uri }}
-  style={{ width: "100%", height: undefined, aspectRatio: 1 }}
-  resizeMode="contain"  // Not "cover"
-/>
-```
+**QR Codes**: Already generated and ready
+**Complexity**: Medium-High (requires printer hardware for testing)
 
-**Complexity**: Low (30 minutes once screen is identified)
+---
+
+### ~~🎨 COMPLETED - NO LONGER PENDING~~
+
+#### ~~1. Photo Annotation System~~ ✅ DONE
+~~Draw on photos with finger to mark damage locations~~
+**Status**: Fully implemented with 6 colors, 4 brush sizes, undo/clear functions
+
+#### ~~2. AI Image Full View Fix~~ ✅ DONE
+~~When editing pictures with AI, only part of the picture is visible~~
+**Status**: Fixed with `resizeMode="contain"` in all image modals
+
+#### ~~3. QR Code Generation & Printing~~ ✅ DONE (Partial)
+~~Generate QR codes using displayId~~
+**Status**: QR generation and display complete. Zebra printing pending.
 
 ---
 

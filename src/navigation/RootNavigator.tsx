@@ -7,6 +7,8 @@ export type RootStackParamList = {
   AddItem: { collectionId: string };
   ItemDetail: { itemId: string; collectionId: string };
   Camera: { collectionId: string; itemId?: string };
+  PhotoAnnotation: { itemId: string; photoId: string };
+  QRCodeDisplay: { collectionId: string; itemIds?: string[] };
   SignCollection: { collectionId: string };
   Settings: undefined;
   QRScanner: undefined;
