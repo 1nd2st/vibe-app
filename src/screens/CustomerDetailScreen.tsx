@@ -16,8 +16,10 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { customerId } = route.params;
 
-  const customer = useCollectionStore((s) => s.customers.find((c) => c.id === customerId));
-  const collections = useCollectionStore((s) => s.collections.filter((c) => c.customerId === customerId));
+  const customers = useCollectionStore((s) => s.customers);
+  const allCollections = useCollectionStore((s) => s.collections);
+  const customer = customers.find((c) => c.id === customerId);
+  const collections = allCollections.filter((c) => c.customerId === customerId);
 
   if (!customer) {
     return (
