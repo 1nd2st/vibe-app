@@ -4,7 +4,10 @@ import * as FileSystem from "expo-file-system";
 import { Alert } from "react-native";
 import type { Collection } from "../types/collection";
 
-export const generateCollectionText = (collection: Collection): string => {
+/**
+ * Generate HTML report with embedded images
+ */
+export const generateCollectionHTML = async (collection: Collection): Promise<string> => {
   const totalValue = collection.items.reduce((sum, item) => {
     const valueInUSD = item.currency === "USD" ? item.estimatedValue :
                        item.currency === "EUR" ? item.estimatedValue * 1.1 :
@@ -14,92 +17,342 @@ export const generateCollectionText = (collection: Collection): string => {
 
   const totalPhotos = collection.items.reduce((sum, item) => sum + item.photos.length, 0);
 
-  let report = `
-═══════════════════════════════════════════════════
-  ART LOGISTICS & CONDITION REPORT
-═══════════════════════════════════════════════════
+  // Convert images to base64 for embedding
+  const itemsWithBase64Photos = await Promise.all(
+    collection.items.map(async (item) => {
+      const photosBase64 = await Promise.all(
+        item.photos.slice(0, 4).map(async (photo) => {
+          try {
+            const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            return `data:image/jpeg;base64,${base64}`;
+          } catch (error) {
+            return "";
+          }
+        })
+      );
+      return { ...item, photosBase64: photosBase64.filter(p => p) };
+    })
+  );
 
-COLLECTION SUMMARY
---------------------------------------------------
-Collection ID:    ${collection.id}
-Date:            ${new Date(collection.collectionDate).toLocaleDateString()}
-Customer:        ${collection.customerName}
-Collector:       ${collection.employeeName}
-Status:          ${collection.status === "signed" ? "Signed & Completed" : collection.status === "completed" ? "Completed" : "In Progress"}
-
-Total Items:     ${collection.items.length}
-Total Photos:    ${totalPhotos}
-Total Value:     USD $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-
-ADDRESSES
---------------------------------------------------
-Pickup:          ${collection.pickupAddress}
-${collection.deliveryAddress ? `Delivery:        ${collection.deliveryAddress}` : ''}
-
-`;
-
-  report += `
-═══════════════════════════════════════════════════
-  ITEMS COLLECTED (${collection.items.length})
-═══════════════════════════════════════════════════
-
-`;
-
-  collection.items.forEach((item, index) => {
-    report += `
-[${index + 1}] ${item.title}${item.artistName ? ` by ${item.artistName}` : ''}
---------------------------------------------------
-Item ID:         ${item.id}
-Dimensions:      ${item.dimensions.length} × ${item.dimensions.width} × ${item.dimensions.height} ${item.dimensions.unit}
-${item.dimensions.weight ? `Weight:          ${item.dimensions.weight} ${item.dimensions.weightUnit}\n` : ''}Value:           ${item.currency} ${item.estimatedValue.toLocaleString()}
-Condition:       ${item.overallCondition}
-Photos:          ${item.photos.length} captured
-
-${item.description ? `Description:\n${item.description}\n\n` : ''}${item.conditionNotes ? `Condition Notes:\n${item.conditionNotes}\n\n` : ''}`;
-
-    const photoNotes = item.photos.filter(p => p.conditionNotes);
-    if (photoNotes.length > 0) {
-      report += 'Photo-Specific Notes:\n';
-      item.photos.forEach((photo, photoIndex) => {
-        if (photo.conditionNotes) {
-          report += `  Photo ${photoIndex + 1}: ${photo.conditionNotes}\n`;
-        }
-      });
-      report += '\n';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9fafb;
     }
-  });
+    .header {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header p {
+      margin: 5px 0;
+      opacity: 0.95;
+    }
+    .section {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 0 0 20px 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .summary-item {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .summary-label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+    .summary-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .item-card {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+    .item-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0;
+    }
+    .item-artist {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 5px 0;
+    }
+    .item-id {
+      font-size: 12px;
+      color: #9ca3af;
+      font-family: monospace;
+    }
+    .condition-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .condition-excellent { background: #d1fae5; color: #065f46; }
+    .condition-good { background: #dbeafe; color: #1e40af; }
+    .condition-fair { background: #fef3c7; color: #92400e; }
+    .condition-poor { background: #fee2e2; color: #991b1b; }
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .photo-item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: #e5e7eb;
+    }
+    .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .photo-count {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .item-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+    .detail-item {
+      font-size: 14px;
+    }
+    .detail-label {
+      color: #6b7280;
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+    .detail-value {
+      color: #1f2937;
+      font-weight: 500;
+    }
+    .notes {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 15px;
+      font-size: 14px;
+      color: #78350f;
+    }
+    .signature-box {
+      background: #f0fdf4;
+      border: 2px solid #86efac;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .signature-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #166534;
+      margin-bottom: 10px;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #6b7280;
+      font-size: 12px;
+      margin-top: 30px;
+    }
+    @media print {
+      body { background: white; }
+      .section { box-shadow: none; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎨 Collection Report</h1>
+    <p><strong>${collection.customerName}</strong></p>
+    <p>Collection ID: ${collection.id}</p>
+    <p>${new Date(collection.collectionDate).toLocaleDateString()} • ${collection.employeeName}</p>
+  </div>
 
-  if (collection.signature) {
-    report += `
-═══════════════════════════════════════════════════
-  SIGNATURE & APPROVAL
-═══════════════════════════════════════════════════
+  <div class="section">
+    <h2 class="section-title">📊 Summary</h2>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="summary-label">Items Collected</div>
+        <div class="summary-value">${collection.items.length}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total Photos</div>
+        <div class="summary-value">${totalPhotos}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Total Value</div>
+        <div class="summary-value">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Status</div>
+        <div class="summary-value">${collection.status === "signed" ? "✅ Signed" : collection.status === "completed" ? "📦 Completed" : "⏳ In Progress"}</div>
+      </div>
+    </div>
 
-Signed by:       ${collection.signature.signerName}
-Role:            ${collection.signature.signerRole}
-Date & Time:     ${new Date(collection.signature.timestamp).toLocaleString()}
+    <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+      <div style="margin-bottom: 10px;"><strong>📍 Pickup:</strong> ${collection.pickupAddress}</div>
+      ${collection.deliveryAddress ? `<div><strong>📦 Delivery:</strong> ${collection.deliveryAddress}</div>` : ''}
+    </div>
+  </div>
 
-`;
-  }
+  <div class="section">
+    <h2 class="section-title">📦 Items Collected (${collection.items.length})</h2>
+    ${itemsWithBase64Photos.map((item, index) => `
+      <div class="item-card">
+        <div class="item-header">
+          <div>
+            <h3 class="item-title">${index + 1}. ${item.title}</h3>
+            ${item.artistName ? `<p class="item-artist">by ${item.artistName}</p>` : ''}
+            <div class="item-id">${item.id}</div>
+          </div>
+          <span class="condition-badge condition-${item.overallCondition.toLowerCase()}">${item.overallCondition}</span>
+        </div>
 
-  if (collection.notes) {
-    report += `
-═══════════════════════════════════════════════════
-  ADDITIONAL NOTES
-═══════════════════════════════════════════════════
+        ${item.photosBase64.length > 0 ? `
+          <div class="photo-grid">
+            ${item.photosBase64.map((photo, photoIndex) => `
+              <div class="photo-item">
+                <img src="${photo}" alt="Photo ${photoIndex + 1}">
+                ${photoIndex === 0 && item.photos.length > 4 ? `<div class="photo-count">+${item.photos.length - 4} more</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : '<p style="color: #9ca3af; font-style: italic;">No photos</p>'}
 
-${collection.notes}
+        <div class="item-details">
+          <div class="detail-item">
+            <div class="detail-label">Dimensions</div>
+            <div class="detail-value">${item.dimensions.length} × ${item.dimensions.width} × ${item.dimensions.height} ${item.dimensions.unit}</div>
+          </div>
+          ${item.dimensions.weight ? `
+            <div class="detail-item">
+              <div class="detail-label">Weight</div>
+              <div class="detail-value">${item.dimensions.weight} ${item.dimensions.weightUnit}</div>
+            </div>
+          ` : ''}
+          <div class="detail-item">
+            <div class="detail-label">Value</div>
+            <div class="detail-value">${item.currency} ${item.estimatedValue.toLocaleString()}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Photos</div>
+            <div class="detail-value">${item.photos.length} captured</div>
+          </div>
+        </div>
 
-`;
-  }
+        ${item.description ? `<div class="notes"><strong>Description:</strong> ${item.description}</div>` : ''}
+        ${item.conditionNotes ? `<div class="notes"><strong>Condition Notes:</strong> ${item.conditionNotes}</div>` : ''}
 
-  report += `
-═══════════════════════════════════════════════════
-Generated: ${new Date().toLocaleString()}
-═══════════════════════════════════════════════════
-`;
+        ${item.photos.some(p => p.conditionNotes) ? `
+          <div class="notes">
+            <strong>Photo Notes:</strong>
+            <ul style="margin: 5px 0 0 0; padding-left: 20px;">
+              ${item.photos.map((photo, photoIndex) =>
+                photo.conditionNotes ? `<li>Photo ${photoIndex + 1}: ${photo.conditionNotes}</li>` : ''
+              ).join('')}
+            </ul>
+          </div>
+        ` : ''}
+      </div>
+    `).join('')}
+  </div>
 
-  return report;
+  ${collection.signature ? `
+    <div class="section">
+      <div class="signature-box">
+        <div class="signature-title">✅ Signed & Approved</div>
+        <p><strong>Name:</strong> ${collection.signature.signerName}</p>
+        <p><strong>Role:</strong> ${collection.signature.signerRole}</p>
+        <p><strong>Date:</strong> ${new Date(collection.signature.timestamp).toLocaleString()}</p>
+      </div>
+    </div>
+  ` : ''}
+
+  ${collection.notes ? `
+    <div class="section">
+      <h2 class="section-title">📝 Additional Notes</h2>
+      <p>${collection.notes}</p>
+    </div>
+  ` : ''}
+
+  <div class="footer">
+    <p>Generated on ${new Date().toLocaleString()}</p>
+    <p>🤖 Generated with Claude Code</p>
+  </div>
+</body>
+</html>
+  `;
+
+  return html;
 };
 
 export const emailCollectionReport = async (collection: Collection): Promise<void> => {
@@ -110,12 +363,12 @@ export const emailCollectionReport = async (collection: Collection): Promise<voi
       return;
     }
 
-    const reportText = generateCollectionText(collection);
+    const reportHTML = await generateCollectionHTML(collection);
 
     await MailComposer.composeAsync({
       subject: `Collection Report - ${collection.customerName} (${collection.id})`,
-      body: reportText,
-      isHtml: false,
+      body: reportHTML,
+      isHtml: true,
     });
   } catch (error) {
     console.error("Error sending email:", error);
@@ -125,18 +378,18 @@ export const emailCollectionReport = async (collection: Collection): Promise<voi
 
 export const shareCollectionReport = async (collection: Collection): Promise<void> => {
   try {
-    const reportText = generateCollectionText(collection);
-    const fileName = `collection-${collection.id}.txt`;
+    const reportHTML = await generateCollectionHTML(collection);
+    const fileName = `collection-${collection.id}.html`;
     const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
-    await FileSystem.writeAsStringAsync(fileUri, reportText, {
+    await FileSystem.writeAsStringAsync(fileUri, reportHTML, {
       encoding: FileSystem.EncodingType.UTF8,
     });
 
     const isAvailable = await Sharing.isAvailableAsync();
     if (isAvailable) {
       await Sharing.shareAsync(fileUri, {
-        mimeType: "text/plain",
+        mimeType: "text/html",
         dialogTitle: `Collection Report - ${collection.customerName}`,
       });
     } else {
