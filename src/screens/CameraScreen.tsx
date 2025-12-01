@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { View, Text, Pressable, TextInput, Modal, FlatList, Image } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import { useCollectionStore } from "../state/collectionStore";
@@ -20,6 +20,8 @@ export default function CameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { collectionId, itemId } = route.params;
   const cameraRef = useRef<CameraView>(null);
+  const isMountedRef = useRef(true);
+  const isCapturingRef = useRef(false);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>("back");
@@ -29,6 +31,13 @@ export default function CameraScreen({ navigation, route }: Props) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const item = useCollectionStore((s) => s.getItem(itemId || ""));
   const updateItem = useCollectionStore((s) => s.updateItem);
@@ -55,12 +64,22 @@ export default function CameraScreen({ navigation, route }: Props) {
   }
 
   const takePicture = async () => {
-    if (!cameraRef.current || !cameraReady) return;
+    // Prevent multiple simultaneous captures
+    if (!cameraRef.current || !cameraReady || isCapturingRef.current || !isMountedRef.current) {
+      return;
+    }
 
     try {
+      isCapturingRef.current = true;
+
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
       });
+
+      // Check if component is still mounted after async operation
+      if (!isMountedRef.current) {
+        return;
+      }
 
       if (photo) {
         const newPhoto: ItemPhoto = {
@@ -77,8 +96,14 @@ export default function CameraScreen({ navigation, route }: Props) {
         if (aiEnabled && aiAutoDetect) {
           // Use setTimeout to run AI analysis asynchronously without blocking UI
           setTimeout(async () => {
+            if (!isMountedRef.current) return;
+
             try {
               const aiResult = await analyzeImageForDamage(photo.uri);
+
+              // Check mount status again after async operation
+              if (!isMountedRef.current) return;
+
               if (aiResult) {
                 // Update the specific photo with AI analysis
                 setPhotos((prevPhotos) => {
@@ -96,14 +121,18 @@ export default function CameraScreen({ navigation, route }: Props) {
                 });
               }
             } catch (aiError) {
-              console.error("Auto AI analysis failed:", aiError);
               // Silently fail - don't block photo capture
             }
           }, 100);
         }
       }
     } catch (error) {
-      console.error("Error taking picture:", error);
+      if (isMountedRef.current) {
+        // Only log error if component is still mounted
+        console.error("Error taking picture:", error);
+      }
+    } finally {
+      isCapturingRef.current = false;
     }
   };
 
