@@ -1,7 +1,9 @@
 export type RootStackParamList = {
+  Customers: undefined;
+  CustomerDetail: { customerId: string };
   Collections: undefined;
   CollectionDetail: { collectionId: string };
-  NewCollection: undefined;
+  NewCollection: { customerId?: string };
   AddItem: { collectionId: string };
   ItemDetail: { itemId: string; collectionId: string };
   Camera: { collectionId: string; itemId?: string };

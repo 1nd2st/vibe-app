@@ -136,7 +136,7 @@ export default function CollectionsScreen({ navigation }: Props) {
 
       {/* Floating Action Button */}
       <Pressable
-        onPress={() => navigation.navigate("NewCollection")}
+        onPress={() => navigation.navigate("NewCollection", {})}
         className="absolute bottom-8 right-6 bg-blue-600 rounded-full w-16 h-16 items-center justify-center shadow-lg active:bg-blue-700"
         style={{
           shadowColor: "#2563EB",

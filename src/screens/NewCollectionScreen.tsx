@@ -4,33 +4,34 @@ import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "NewCollection">;
+  route: RouteProp<RootStackParamList, "NewCollection">;
 };
 
-export default function NewCollectionScreen({ navigation }: Props) {
+export default function NewCollectionScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const addCollection = useCollectionStore((s) => s.addCollection);
+  const { customerId } = route.params;
 
-  const [customerName, setCustomerName] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [pickupAddress, setPickupAddress] = useState("");
+  const addCollection = useCollectionStore((s) => s.addCollection);
+  const customer = useCollectionStore((s) => s.customers.find((c) => c.id === customerId));
+
+  const [pickupAddress, setPickupAddress] = useState(customer?.address || "");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   const [notes, setNotes] = useState("");
 
   const handleCreate = () => {
-    if (!customerName.trim() || !pickupAddress.trim() || !employeeName.trim()) {
+    if (!customer || !pickupAddress.trim() || !employeeName.trim()) {
       return;
     }
 
     const collectionId = addCollection({
-      customerName: customerName.trim(),
-      customerId: `CUST-${Date.now()}`,
+      customerName: customer.name,
+      customerId: customer.id,
       collectionDate: Date.now(),
       status: "in_progress",
       pickupAddress: pickupAddress.trim(),
@@ -42,7 +43,19 @@ export default function NewCollectionScreen({ navigation }: Props) {
     navigation.replace("CollectionDetail", { collectionId });
   };
 
-  const canCreate = customerName.trim() && pickupAddress.trim() && employeeName.trim();
+  const canCreate = customer && pickupAddress.trim() && employeeName.trim();
+
+  if (!customer) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <Ionicons name="alert-circle-outline" size={64} color="#DC2626" />
+        <Text className="text-gray-900 text-lg font-semibold mt-4">Customer not found</Text>
+        <Pressable onPress={() => navigation.goBack()} className="mt-4">
+          <Text className="text-blue-600 text-base">Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -63,47 +76,17 @@ export default function NewCollectionScreen({ navigation }: Props) {
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
         {/* Customer Information */}
         <View className="bg-white rounded-2xl p-4 mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">Customer Information</Text>
+          <Text className="text-lg font-semibold text-gray-900 mb-4">Customer</Text>
 
-          <Text className="text-sm font-medium text-gray-700 mb-2">Customer Name *</Text>
-          <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
-            placeholder="Enter customer name"
-            placeholderTextColor="#9CA3AF"
-            value={customerName}
-            onChangeText={setCustomerName}
-          />
-
-          <Text className="text-sm font-medium text-gray-700 mb-2">Address</Text>
-          <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
-            placeholder="Customer address"
-            placeholderTextColor="#9CA3AF"
-            value={customerAddress}
-            onChangeText={setCustomerAddress}
-            multiline
-          />
-
-          <Text className="text-sm font-medium text-gray-700 mb-2">Phone</Text>
-          <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
-            placeholder="Phone number"
-            placeholderTextColor="#9CA3AF"
-            value={customerPhone}
-            onChangeText={setCustomerPhone}
-            keyboardType="phone-pad"
-          />
-
-          <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
-          <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-            placeholder="Email address"
-            placeholderTextColor="#9CA3AF"
-            value={customerEmail}
-            onChangeText={setCustomerEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <View className="bg-blue-50 rounded-xl p-4">
+            <Text className="text-blue-900 font-semibold text-base">{customer.name}</Text>
+            {customer.email && (
+              <Text className="text-blue-700 text-sm mt-1">{customer.email}</Text>
+            )}
+            {customer.phone && (
+              <Text className="text-blue-700 text-sm mt-0.5">{customer.phone}</Text>
+            )}
+          </View>
         </View>
 
         {/* Collection Details */}

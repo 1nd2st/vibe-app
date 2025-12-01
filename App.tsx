@@ -6,6 +6,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { RootStackParamList } from "./src/navigation/RootNavigator";
 
 // Screens
+import CustomersScreen from "./src/screens/CustomersScreen";
+import CustomerDetailScreen from "./src/screens/CustomerDetailScreen";
 import CollectionsScreen from "./src/screens/CollectionsScreen";
 import NewCollectionScreen from "./src/screens/NewCollectionScreen";
 import CollectionDetailScreen from "./src/screens/CollectionDetailScreen";
@@ -45,11 +47,14 @@ export default function App() {
       <SafeAreaProvider>
         <NavigationContainer>
           <Stack.Navigator
+            initialRouteName="Customers"
             screenOptions={{
               headerShown: false,
               animation: "default",
             }}
           >
+            <Stack.Screen name="Customers" component={CustomersScreen} />
+            <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
             <Stack.Screen name="Collections" component={CollectionsScreen} />
             <Stack.Screen
               name="NewCollection"
