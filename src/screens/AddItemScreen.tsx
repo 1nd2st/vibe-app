@@ -33,14 +33,14 @@ export default function AddItemScreen({ navigation, route }: Props) {
   const [conditionNotes, setConditionNotes] = useState("");
 
   const handleContinueToPhotos = () => {
-    if (!title.trim() || !length || !width || !height || !estimatedValue) {
+    if (!title.trim()) {
       return;
     }
 
     const dimensions: ItemDimensions = {
-      length: parseFloat(length),
-      width: parseFloat(width),
-      height: parseFloat(height),
+      length: length ? parseFloat(length) : 0,
+      width: width ? parseFloat(width) : 0,
+      height: height ? parseFloat(height) : 0,
       unit,
       weight: weight ? parseFloat(weight) : undefined,
       weightUnit: weight ? weightUnit : undefined,
@@ -51,7 +51,7 @@ export default function AddItemScreen({ navigation, route }: Props) {
       description: description.trim(),
       artistName: artistName.trim() || undefined,
       dimensions,
-      estimatedValue: parseFloat(estimatedValue),
+      estimatedValue: estimatedValue ? parseFloat(estimatedValue) : 0,
       currency,
       photos: [],
       overallCondition: condition,
@@ -61,9 +61,7 @@ export default function AddItemScreen({ navigation, route }: Props) {
     navigation.navigate("Camera", { collectionId, itemId });
   };
 
-  const canContinue = title.trim() && length && width && height && estimatedValue &&
-    !isNaN(parseFloat(length)) && !isNaN(parseFloat(width)) && !isNaN(parseFloat(height)) &&
-    !isNaN(parseFloat(estimatedValue));
+  const canContinue = title.trim().length > 0;
 
   return (
     <KeyboardAvoidingView
@@ -119,7 +117,7 @@ export default function AddItemScreen({ navigation, route }: Props) {
         {/* Dimensions */}
         <View className="bg-white rounded-2xl p-4 mb-4">
           <View className="flex-row items-center justify-between mb-4">
-            <Text className="text-lg font-semibold text-gray-900">Dimensions *</Text>
+            <Text className="text-lg font-semibold text-gray-900">Dimensions</Text>
             <View className="flex-row bg-gray-100 rounded-lg p-1">
               <Pressable
                 onPress={() => setUnit("cm")}
@@ -215,7 +213,7 @@ export default function AddItemScreen({ navigation, route }: Props) {
 
           <View className="flex-row items-end space-x-3 mb-4">
             <View className="flex-1">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Estimated Value *</Text>
+              <Text className="text-sm font-medium text-gray-700 mb-2">Estimated Value</Text>
               <TextInput
                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
                 placeholder="0.00"

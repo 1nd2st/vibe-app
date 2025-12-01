@@ -168,8 +168,13 @@ export default function CameraScreen({ navigation, route }: Props) {
     if (itemId && photos.length > 0) {
       updateItem(itemId, { photos });
     }
-    // Use goBack instead of navigate to properly unmount the camera
-    navigation.goBack();
+    // Navigate back to CollectionDetail, removing both Camera and AddItem from stack
+    navigation.reset({
+      index: 0,
+      routes: [
+        { name: "CollectionDetail" as const, params: { collectionId } },
+      ],
+    });
   };
 
   return (

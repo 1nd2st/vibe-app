@@ -4,6 +4,16 @@ export interface Customer {
   address: string;
   phone: string;
   email: string;
+  locations?: CustomerLocation[];
+}
+
+export interface CustomerLocation {
+  id: string;
+  name: string;
+  address: string;
+  type: "pickup" | "delivery" | "both";
+  isDefault?: boolean;
+  createdAt: number;
 }
 
 export interface ItemDimensions {
@@ -26,6 +36,7 @@ export interface ItemPhoto {
 
 export interface CollectionItem {
   id: string;
+  displayId: string; // Short ID for QR codes (e.g., "A1234-01")
   collectionId: string;
   title: string;
   description: string;
@@ -49,6 +60,7 @@ export interface CollectionSignature {
 
 export interface Collection {
   id: string;
+  displayId: string; // Short ID for QR codes (e.g., "A1234")
   customerId: string;
   customerName: string;
   collectionDate: number;

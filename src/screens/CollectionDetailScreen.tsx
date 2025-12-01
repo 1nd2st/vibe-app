@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, FlatList, Pressable, Alert, Modal } from "react-native";
+import { View, Text, FlatList, Pressable, Alert, Modal, Image } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -236,6 +236,47 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                     <Text className="text-white text-lg font-bold">{collection.items.length}</Text>
                   </View>
                 </View>
+              </View>
+            )}
+
+            {/* Signature Display */}
+            {collection.signature && (
+              <View className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 mb-3">
+                <View className="flex-row items-center mb-3">
+                  <View className="bg-green-600 w-10 h-10 rounded-full items-center justify-center mr-3">
+                    <Ionicons name="checkmark-done" size={24} color="#FFFFFF" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-lg font-bold text-green-900">Collection Signed</Text>
+                    <Text className="text-sm text-green-700">
+                      {new Date(collection.signature.timestamp).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="bg-white rounded-xl p-3 mb-3">
+                  <View className="mb-2">
+                    <Text className="text-xs font-medium text-gray-500 mb-1">SIGNER NAME</Text>
+                    <Text className="text-base font-semibold text-gray-900">{collection.signature.signerName}</Text>
+                  </View>
+                  <View>
+                    <Text className="text-xs font-medium text-gray-500 mb-1">ROLE/TITLE</Text>
+                    <Text className="text-base font-semibold text-gray-900">{collection.signature.signerRole}</Text>
+                  </View>
+                </View>
+
+                {collection.signature.signatureUri && (
+                  <View>
+                    <Text className="text-xs font-medium text-gray-700 mb-2">SIGNATURE</Text>
+                    <View className="bg-white rounded-xl p-3 border-2 border-dashed border-green-300">
+                      <Image
+                        source={{ uri: collection.signature.signatureUri }}
+                        style={{ width: "100%", height: 120 }}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 

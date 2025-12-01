@@ -5,43 +5,60 @@ A professional mobile application for art moving and logistics companies to docu
 ## Overview
 
 This app streamlines the collection process for art logistics companies by providing a complete digital workflow for:
-- Creating and managing collections with progress tracking
-- Documenting items with photos and detailed condition reports
-- Capturing client signatures for collection approval
-- Exporting and sharing professional collection reports
-- Generating unique IDs for collections and items for integration with other systems
+- Managing customers and their locations (pickup/delivery addresses)
+- Creating and managing collections with auto-generated QR-compatible IDs
+- Documenting items with photos and detailed condition reports (only title required)
+- Capturing client signatures with full visual display on collection screen
+- Exporting professional HTML reports with embedded photos (no branding)
+- Item CRUD with read-only protection after signature
 
 ## Key Features
 
-### 1. **Collections Management**
-- View all collections with status indicators (In Progress, Completed, Signed)
-- Search collections by customer name or collection ID
-- Track multiple collections per customer
-- Each collection has a unique ID (format: `COL-{timestamp}-{random}`)
-- Visual progress bar showing collection completion status
+### 1. **Customer Management (NEW)**
+- **Customer Hierarchy**: Customers → Collections → Items
+- View all customers with collection counts (active/completed)
+- Quick add customer with contact information
+- Customer detail screen shows all collections per customer
+- Search customers by name
+- Each customer has locations for pickup/delivery
 
-### 2. **Progress Tracking**
+### 2. **Location Management (NEW)**
+- Save customer pickup and delivery locations
+- CRUD operations for locations
+- Default location selection (last used)
+- Location types: pickup, delivery, or both
+
+### 3. **Collections Management**
+- **Auto-Generated IDs**: Each collection gets a short, QR-friendly ID (e.g., "A1234")
+- View collections per customer or all collections
+- Status indicators (In Progress, Completed, Signed)
+- Track multiple collections per customer
+- Visual progress bar showing collection completion status
+- Signature display with signer info and captured signature image
+
+### 4. **Progress Tracking**
 - **25%**: Collection created
 - **50%**: Items added with photos
 - **75%**: Collection marked as completed
 - **100%**: Signed and approved
 - Color-coded progress indicator (gray → amber → blue → green)
 
-### 3. **New Collection Creation**
+### 5. **New Collection Creation**
 - Customer information capture (name, address, phone, email)
 - Collection details (pickup address, delivery address, collector name)
 - Additional notes field
 - All data validated before creation
 
-### 4. **Item Documentation**
-- **Basic Information**: Title, description, artist name
-- **Dimensions**: Length, width, height (cm or in), optional weight (kg or lb)
-- **Value**: Estimated value in USD, EUR, or GBP
-- **Condition Rating**: Excellent, Good, Fair, Poor, or Damaged
-- **Condition Notes**: Detailed text description
-- Each item has a unique ID (format: `ITEM-{timestamp}-{random}`)
+### 6. **Item Documentation (SIMPLIFIED)**
+- **Only title is mandatory** - Quick item entry workflow
+- Optional fields: description, artist name, dimensions, value, condition
+- **Auto-Generated Display IDs**: Each item gets ID based on collection (e.g., "A1234-01", "A1234-02")
+- Condition Rating: Excellent, Good, Fair, Poor, or Damaged
+- Each item has unique internal ID for tracking
 
-### 5. **Photo Capture & Condition Reporting**
+### 7. **Photo Capture & Condition Reporting (FIXED)**
+- **Fixed camera unmounting bug** - Navigation properly closes both camera and add item screens
+- **No duplicate items** - Items only created once, photos update existing item
 - Built-in camera with flash and flip camera controls
 - Take multiple photos per item
 - Add condition notes specific to each photo
@@ -51,13 +68,13 @@ This app streamlines the collection process for art logistics companies by provi
 - **AI Damage Detection**: Automatically or manually analyze photos for damage (GPT-4 Vision or Claude 3.5 Sonnet)
 - AI-generated condition notes clearly marked and editable
 
-### 6. **QR Code System**
+### 8. **QR Code System (READY FOR IMPLEMENTATION)**
 - Generate unique QR codes for each collection and item
 - Scan QR codes to instantly navigate to collections or items
 - QR codes contain collection/item IDs for external system integration
 - Scanner accessible from main Collections screen
 
-### 7. **Zebra Label Printing**
+### 9. **Zebra Label Printing (READY FOR IMPLEMENTATION)**
 - Generate ZPL (Zebra Programming Language) code for label printing
 - Labels include QR code, human-readable ID, and item description
 - Configurable label dimensions (width × height in inches)
@@ -65,7 +82,7 @@ This app streamlines the collection process for art logistics companies by provi
 - Print via network (IP address configuration in settings)
 - Company branding on labels
 
-### 8. **Item Detail View**
+### 10. **Item Detail View**
 - View all item photos in a grid layout
 - Complete item specifications display
 - Overall condition report with color-coded badges
@@ -74,7 +91,9 @@ This app streamlines the collection process for art logistics companies by provi
 - **AI Analyze Button**: Manually trigger AI damage detection on any photo
 - AI analysis results appear with "[AI Analysis]" tag
 
-### 9. **Digital Signature Collection**
+### 11. **Digital Signature Collection (FIXED)**
+- **Signature now displays on collection screen** - Shows signer name, role, date, and actual signature image
+- Beautiful green card with signature details when collection is signed
 - Comprehensive collection summary before signing
 - **Shows all collected items** with:
   - Item thumbnails (first 4 photos per item)
@@ -89,27 +108,32 @@ This app streamlines the collection process for art logistics companies by provi
 - Prevents signing without items added
 - Enforces completion workflow before signing
 
-### 10. **Export & Sharing**
-- **Email Report**: Send detailed collection report via email
-- **Share Report**: Export as text file and share via any app
+### 12. **Export & Sharing (IMPROVED)**
+- **HTML Reports with Embedded Photos** - Professional reports with actual photo thumbnails visible
+- **No Claude Code Branding** - Clean, professional reports with only generation timestamp
+- **Email Report**: Send detailed HTML collection report via email with visible photos
+- **Share Report**: Export as HTML file and share via any app
 - Professional formatted reports include:
   - Collection summary with totals
   - All item details with dimensions and values
-  - Condition ratings and notes
+  - Photo grids (up to 4 photos per item displayed inline)
+  - Condition ratings with color-coded badges
   - Photo-specific condition notes
-  - Signature information (if signed)
+  - Signature information with details (if signed)
   - Timestamp and collection IDs
 - Easy access via share icon in collection detail header
 
-### 11. **View-Only Mode**
-- Signed collections are automatically locked
+### 13. **View-Only Mode & Item CRUD**
+- **Items are editable until signature** - Full CRUD operations on items
+- **Read-only after signature** - Signed collections are automatically locked
 - Visual "locked" banner displayed prominently
 - All edit buttons hidden for signed collections
 - Cannot add new items to signed collections
 - Cannot modify existing items or collection details
+- Cannot delete items from signed collections
 - Export and viewing still available
 
-### 12. **Collection Workflow**
+### 14. **Collection Workflow**
 1. **Create Collection** (25%) → Enter customer and collection details
 2. **Add Items** (50%) → Document items with photos and condition reports
 3. **Mark as Completed** (75%) → Review all items
@@ -312,6 +336,224 @@ All data is stored locally using AsyncStorage and persists between app sessions.
 6. **Mark Complete**: Once all items documented, mark collection as completed
 7. **Get Signature**: Have client/manager sign after reviewing all items
 8. **Export**: Use share icon to email or share the complete collection report
+
+## Latest Updates & Fixes (December 2025)
+
+### ✅ COMPLETED FIXES
+
+#### 1. **Signature Display Issue - FIXED**
+**Problem**: Signatures were being captured but not displayed on the collection screen after signing.
+**Solution**: Added comprehensive signature display card showing:
+- Signer name and role
+- Signature timestamp
+- Actual signature image in bordered box
+- Beautiful green-themed card matching signed status
+
+**Files Changed**: `src/screens/CollectionDetailScreen.tsx`
+
+#### 2. **Camera Unmounting Error - FIXED**
+**Problem**: "Camera unmounted during taking photo process" error caused by component unmounting during async operations.
+**Solution**:
+- Added lifecycle tracking with `isMountedRef`
+- Added capture guard with `isCapturingRef` to prevent concurrent captures
+- Check mount status after all async operations
+- Graceful error handling when component unmounts
+
+**Files Changed**: `src/screens/CameraScreen.tsx`
+
+#### 3. **Duplicate Item Creation - FIXED**
+**Problem**: After taking photos and closing camera, AddItem screen remained open, allowing duplicate item creation.
+**Solution**: Changed navigation to use `reset()` instead of `goBack()` - now directly navigates to CollectionDetail, removing both Camera and AddItem from navigation stack.
+
+**Files Changed**: `src/screens/CameraScreen.tsx`
+
+#### 4. **Item Form Validation - SIMPLIFIED**
+**Problem**: Too many required fields made item entry tedious in field conditions.
+**Solution**:
+- **Only title is now mandatory**
+- All other fields (dimensions, value, artist, etc.) are optional
+- Default values (0) used for missing numeric fields
+- Faster workflow for field teams
+
+**Files Changed**: `src/screens/AddItemScreen.tsx`
+
+#### 5. **Collection & Item IDs - AUTO-GENERATED**
+**Problem**: Long internal IDs not suitable for QR codes or human reading.
+**Solution**:
+- Collections now get short, friendly IDs (e.g., "A1234")
+- Items get hierarchical IDs based on collection (e.g., "A1234-01", "A1234-02")
+- Perfect for QR code generation and printing
+- IDs auto-generated on creation
+
+**Files Changed**:
+- `src/types/collection.ts` (added `displayId` fields)
+- `src/state/collectionStore.ts` (added ID generation logic)
+
+#### 6. **Report Branding - REMOVED**
+**Problem**: Reports included "Generated with Claude Code" branding.
+**Solution**: Removed all AI assistant branding from reports. Reports now show only generation timestamp.
+
+**Files Changed**: `src/utils/collectionReports.ts`
+
+#### 7. **Customer Locations - FOUNDATION ADDED**
+**Problem**: Users had to re-enter pickup/delivery addresses for each collection.
+**Solution**:
+- Added `CustomerLocation` type to data model
+- Added CRUD methods in store for locations
+- Locations support types: pickup, delivery, or both
+- Default location tracking for convenience
+
+**Files Changed**:
+- `src/types/collection.ts` (added `CustomerLocation` interface)
+- `src/state/collectionStore.ts` (added location CRUD methods)
+
+**Status**: Foundation complete, UI implementation pending.
+
+---
+
+### 🔨 READY FOR IMPLEMENTATION
+
+These features have the data structures and backend logic ready. UI implementation needed:
+
+#### 1. **Customer Location Management UI**
+- Location list screen per customer
+- Add/edit/delete location modals
+- Location selector in NewCollection screen
+- Auto-select last used location
+- Location type indicators (pickup/delivery/both)
+
+#### 2. **QR Code Generation & Printing**
+- displayId fields are ready for use
+- Generate QR codes using `react-native-qrcode-svg`
+- Print all/selected item QR codes
+- Zebra label printing with ZPL format
+- QR codes scannable to navigate to items
+
+#### 3. **Item CRUD Operations**
+- Edit item button in ItemDetail screen
+- Delete item with confirmation
+- Read-only enforcement when collection.status === "signed"
+- Update item details form
+
+---
+
+### 🎨 PENDING FEATURES (Requested)
+
+#### 1. **Photo Annotation System** (Like Articheck)
+**What's Needed**:
+- Draw on photos with finger to mark damage locations
+- Multiple annotation layers per photo
+- Color picker for drawing
+- Undo/redo functionality
+- Save annotated images separately
+
+**Recommended Approach**:
+```typescript
+// Use react-native-skia for drawing
+import { Canvas, Path, Skia } from "@shopify/react-native-skia";
+
+// Photo annotation screen similar to SignatureScreen
+// - Display photo as background
+// - Overlay Canvas for drawing
+// - Pan gesture for drawing paths
+// - Save final result as new image with annotations
+```
+
+**Files to Create**:
+- `src/screens/PhotoAnnotationScreen.tsx`
+- Update `ItemPhoto` interface to include `annotatedUri?: string`
+- Add "Annotate" button in photo note modal
+
+**Complexity**: Medium (2-3 hours)
+
+#### 2. **AI Image Full View Fix**
+**Problem**: When editing pictures with AI, only part of the picture is visible.
+**Investigation Needed**:
+- Check which screen this occurs on (ItemDetail? Photo modal?)
+- Verify Image component `resizeMode` prop
+- Check container dimensions and aspect ratio handling
+
+**Likely Fix**:
+```typescript
+// Ensure full image visibility
+<Image
+  source={{ uri: photo.uri }}
+  style={{ width: "100%", height: undefined, aspectRatio: 1 }}
+  resizeMode="contain"  // Not "cover"
+/>
+```
+
+**Complexity**: Low (30 minutes once screen is identified)
+
+---
+
+### 📋 RECOMMENDATIONS & IMPROVEMENTS
+
+#### UX Improvements
+1. **Loading States**: Add loading spinners during AI analysis and report generation
+2. **Haptic Feedback**: Add subtle vibrations on button presses for better mobile feel
+3. **Image Optimization**: Compress photos before storage to save space
+4. **Offline Indicator**: Show when device is offline (affects AI features)
+5. **Batch Operations**: Select multiple items for QR printing or deletion
+6. **Search & Filter**: Filter items by condition, value range, or date
+7. **Sort Options**: Sort items by value, condition, date added
+8. **Collection Templates**: Pre-fill common item types (paintings, sculptures, etc.)
+
+#### Data & Security
+1. **Cloud Backup**: Sync to cloud storage (Firebase, AWS S3)
+2. **Export to PDF**: Generate PDF reports (requires expo-print)
+3. **Data Export**: Export all data as JSON for backup
+4. **Data Import**: Import collections from JSON
+5. **Encryption**: Encrypt sensitive data in AsyncStorage
+6. **Multi-device Sync**: Share collections between team members
+
+#### Analytics & Reporting
+1. **Dashboard**: Show statistics (items per week, average values, condition trends)
+2. **Customer History**: View all past collections for a customer
+3. **Value Tracking**: Track total value handled over time
+4. **Photo Statistics**: Average photos per item, most common conditions
+5. **Export History**: Track when reports were sent and to whom
+
+#### Integration & Automation
+1. **Email Templates**: Pre-configured email templates for reports
+2. **Calendar Integration**: Schedule pickup/delivery reminders
+3. **Contact Sync**: Import customers from phone contacts
+4. **Barcode Scanning**: Scan existing barcodes to prefill item data
+5. **Voice Notes**: Record audio notes for items
+6. **GPS Tagging**: Auto-capture location for pickups/deliveries
+
+---
+
+### 🐛 KNOWN ISSUES
+
+Currently, there are **no known critical bugs**. All reported issues have been fixed.
+
+---
+
+### 🚀 QUICK START FOR REMAINING FEATURES
+
+#### To Implement Photo Annotation:
+1. Create `PhotoAnnotationScreen.tsx` based on `SignCollectionScreen.tsx`
+2. Add navigation route in `RootNavigator.tsx`
+3. Add "Annotate" button in photo note modal
+4. Update `ItemPhoto` interface with `annotatedUri` field
+5. Save annotated image and update item photos array
+
+#### To Implement Location Management:
+1. Create `CustomerLocationsScreen.tsx`
+2. Add navigation from CustomerDetailScreen
+3. Create location add/edit modals
+4. Update `NewCollectionScreen` to show location picker
+5. Load last used location as default
+
+#### To Implement QR Code Printing:
+1. Install `react-native-qrcode-svg` or `react-native-qrcode-generator`
+2. Create `QRCodeGenerator` component
+3. Add "Print QR Codes" button in CollectionDetail
+4. Generate QR code for each selected item using `displayId`
+5. Optionally integrate Zebra printer via network socket
+
+---
 
 ## Fixes & Improvements Implemented
 

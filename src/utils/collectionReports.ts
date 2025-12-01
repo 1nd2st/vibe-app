@@ -346,7 +346,6 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
 
   <div class="footer">
     <p>Generated on ${new Date().toLocaleString()}</p>
-    <p>🤖 Generated with Claude Code</p>
   </div>
 </body>
 </html>
