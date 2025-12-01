@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { View, Text, Pressable, TextInput, Alert } from "react-native";
+import { View, Text, Pressable, TextInput, Alert, ScrollView, Image } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +33,14 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   const [paths, setPaths] = useState<PathData[]>([]);
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
+
+  // Calculate total value
+  const totalValue = collection?.items.reduce((sum, item) => {
+    const valueInUSD = item.currency === "USD" ? item.estimatedValue :
+                       item.currency === "EUR" ? item.estimatedValue * 1.1 :
+                       item.estimatedValue * 1.25;
+    return sum + valueInUSD;
+  }, 0) || 0;
 
   const pan = Gesture.Pan()
     .onStart((e) => {
@@ -87,7 +95,6 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     }
 
     try {
-      // Capture signature as image
       const uri = await captureRef(signatureRef, {
         format: "png",
         quality: 1,
@@ -118,7 +125,6 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
 
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-      {/* Header */}
       <View className="bg-white px-6 py-4 border-b border-gray-200">
         <View className="flex-row items-center">
           <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
@@ -131,9 +137,8 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      <View className="flex-1 p-6">
-        {/* Collection Summary */}
-        <View className="bg-white rounded-2xl p-4 mb-4">
+      <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 20 }}>
+        <View className="bg-white rounded-2xl p-4 my-4">
           <Text className="text-lg font-semibold text-gray-900 mb-3">Collection Summary</Text>
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Collection ID:</Text>
@@ -142,6 +147,18 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Total Items:</Text>
             <Text className="text-gray-900 font-medium">{collection.items.length}</Text>
+          </View>
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-gray-600">Total Photos:</Text>
+            <Text className="text-gray-900 font-medium">
+              {collection.items.reduce((sum, item) => sum + item.photos.length, 0)}
+            </Text>
+          </View>
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-gray-600">Total Value:</Text>
+            <Text className="text-gray-900 font-semibold">
+              USD {totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
           </View>
           <View className="flex-row justify-between mb-2">
             <Text className="text-gray-600">Collector:</Text>
@@ -155,7 +172,74 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        {/* Signer Information */}
+        <View className="bg-white rounded-2xl p-4 mb-4">
+          <Text className="text-lg font-semibold text-gray-900 mb-3">Items Collected</Text>
+          {collection.items.map((item, index) => (
+            <View key={item.id} className="mb-4 pb-4 border-b border-gray-100 last:border-b-0">
+              <View className="flex-row mb-2">
+                <View className="bg-blue-100 w-8 h-8 rounded-full items-center justify-center mr-3">
+                  <Text className="text-blue-700 font-semibold">{index + 1}</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-gray-900">{item.title}</Text>
+                  {item.artistName && (
+                    <Text className="text-sm text-gray-600">by {item.artistName}</Text>
+                  )}
+                </View>
+              </View>
+
+              <View className="ml-11">
+                <Text className="text-sm text-gray-600 mb-1">
+                  {item.dimensions.length} × {item.dimensions.width} × {item.dimensions.height} {item.dimensions.unit}
+                </Text>
+                <Text className="text-sm text-gray-600 mb-1">
+                  Value: {item.currency} {item.estimatedValue.toLocaleString()}
+                </Text>
+                <View className="flex-row items-center mb-2">
+                  <View
+                    className={`px-2 py-1 rounded-md ${
+                      item.overallCondition === "Excellent" ? "bg-green-100" :
+                      item.overallCondition === "Good" ? "bg-blue-100" :
+                      item.overallCondition === "Fair" ? "bg-yellow-100" : "bg-red-100"
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-medium ${
+                        item.overallCondition === "Excellent" ? "text-green-700" :
+                        item.overallCondition === "Good" ? "text-blue-700" :
+                        item.overallCondition === "Fair" ? "text-yellow-700" : "text-red-700"
+                      }`}
+                    >
+                      {item.overallCondition}
+                    </Text>
+                  </View>
+                  <Text className="text-xs text-gray-500 ml-2">
+                    {item.photos.length} photo{item.photos.length !== 1 ? "s" : ""}
+                  </Text>
+                </View>
+
+                {item.photos.length > 0 && (
+                  <View className="flex-row flex-wrap gap-1">
+                    {item.photos.slice(0, 4).map((photo) => (
+                      <Image
+                        key={photo.id}
+                        source={{ uri: photo.uri }}
+                        style={{ width: 50, height: 50 }}
+                        className="rounded-lg"
+                      />
+                    ))}
+                    {item.photos.length > 4 && (
+                      <View className="w-12 h-12 bg-gray-200 rounded-lg items-center justify-center">
+                        <Text className="text-xs text-gray-600">+{item.photos.length - 4}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            </View>
+          ))}
+        </View>
+
         <View className="bg-white rounded-2xl p-4 mb-4">
           <Text className="text-lg font-semibold text-gray-900 mb-3">Signer Information</Text>
 
@@ -178,8 +262,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           />
         </View>
 
-        {/* Signature Pad */}
-        <View className="bg-white rounded-2xl p-4 mb-4 flex-1">
+        <View className="bg-white rounded-2xl p-4 mb-4">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-semibold text-gray-900">Signature *</Text>
             <Pressable onPress={clearSignature} className="active:opacity-70">
@@ -193,8 +276,8 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
 
           <View
             ref={signatureRef}
-            className="flex-1 border-2 border-dashed border-gray-300 rounded-xl bg-white overflow-hidden"
-            style={{ minHeight: 200 }}
+            className="border-2 border-dashed border-gray-300 rounded-xl bg-white overflow-hidden"
+            style={{ height: 200 }}
           >
             <GestureDetector gesture={pan}>
               <Canvas style={{ flex: 1 }}>
@@ -205,9 +288,8 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
             </GestureDetector>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
-      {/* Submit Button */}
       <View className="bg-white border-t border-gray-200 px-6 py-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <Pressable
           onPress={handleSign}

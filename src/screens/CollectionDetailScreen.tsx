@@ -1,11 +1,12 @@
-import React from "react";
-import { View, Text, FlatList, Pressable, Alert } from "react-native";
+import React, { useState } from "react";
+import { View, Text, FlatList, Pressable, Alert, Modal } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { emailCollectionReport, shareCollectionReport } from "../utils/collectionReports";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "CollectionDetail">;
@@ -20,6 +21,8 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     s.collections.find((c) => c.id === collectionId)
   );
   const updateCollection = useCollectionStore((s) => s.updateCollection);
+
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   if (!collection) {
     return (
@@ -66,6 +69,32 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     navigation.navigate("SignCollection", { collectionId });
   };
 
+  const handleEmailReport = async () => {
+    setShowExportMenu(false);
+    await emailCollectionReport(collection);
+  };
+
+  const handleShareReport = async () => {
+    setShowExportMenu(false);
+    await shareCollectionReport(collection);
+  };
+
+  // Calculate progress
+  const getProgress = () => {
+    if (collection.status === "signed") return 100;
+    if (collection.status === "completed") return 75;
+    if (collection.items.length > 0) return 50;
+    return 25;
+  };
+
+  const getProgressColor = () => {
+    const progress = getProgress();
+    if (progress === 100) return "#16A34A";
+    if (progress >= 75) return "#2563EB";
+    if (progress >= 50) return "#F59E0B";
+    return "#6B7280";
+  };
+
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -78,6 +107,12 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
             <Text className="text-2xl font-bold text-gray-900">{collection.customerName}</Text>
             <Text className="text-sm text-gray-500">{collection.id}</Text>
           </View>
+          <Pressable
+            onPress={() => setShowExportMenu(true)}
+            className="mr-3 active:opacity-70"
+          >
+            <Ionicons name="share-outline" size={24} color="#2563EB" />
+          </Pressable>
           {collection.status === "signed" && (
             <View className="flex-row items-center bg-green-100 px-3 py-1.5 rounded-full">
               <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
@@ -85,6 +120,23 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
             </View>
           )}
         </View>
+
+        {/* Progress Bar */}
+        <View className="mb-3">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-xs font-medium text-gray-600">Collection Progress</Text>
+            <Text className="text-xs font-semibold" style={{ color: getProgressColor() }}>
+              {getProgress()}%
+            </Text>
+          </View>
+          <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <View
+              className="h-full rounded-full"
+              style={{ width: `${getProgress()}%`, backgroundColor: getProgressColor() }}
+            />
+          </View>
+        </View>
+
         <Text className="text-sm text-gray-600">{collection.pickupAddress}</Text>
         <Text className="text-xs text-gray-400 mt-1">
           {new Date(collection.collectionDate).toLocaleDateString()} • {collection.employeeName}
@@ -222,6 +274,53 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           <Ionicons name="add" size={32} color="#FFFFFF" />
         </Pressable>
       )}
+
+      {/* Export Menu Modal */}
+      <Modal visible={showExportMenu} transparent animationType="fade">
+        <Pressable
+          className="flex-1 bg-black/50 justify-end"
+          onPress={() => setShowExportMenu(false)}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View className="bg-white rounded-t-3xl p-6" style={{ paddingBottom: insets.bottom + 24 }}>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-xl font-bold text-gray-900">Export Collection</Text>
+                <Pressable onPress={() => setShowExportMenu(false)} className="active:opacity-70">
+                  <Ionicons name="close" size={28} color="#111827" />
+                </Pressable>
+              </View>
+
+              <Pressable
+                onPress={handleShareReport}
+                className="flex-row items-center p-4 bg-blue-50 rounded-xl mb-3 active:bg-blue-100"
+              >
+                <View className="w-12 h-12 bg-blue-600 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="share-social-outline" size={24} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-gray-900">Share Report</Text>
+                  <Text className="text-sm text-gray-600">Export as text file and share</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </Pressable>
+
+              <Pressable
+                onPress={handleEmailReport}
+                className="flex-row items-center p-4 bg-green-50 rounded-xl active:bg-green-100"
+              >
+                <View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="mail-outline" size={24} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-gray-900">Email Report</Text>
+                  <Text className="text-sm text-gray-600">Send collection details via email</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

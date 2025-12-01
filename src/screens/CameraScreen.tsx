@@ -104,7 +104,8 @@ export default function CameraScreen({ navigation, route }: Props) {
     if (itemId && photos.length > 0) {
       updateItem(itemId, { photos });
     }
-    navigation.navigate("CollectionDetail", { collectionId });
+    // Use goBack instead of navigate to properly unmount the camera
+    navigation.goBack();
   };
 
   return (
