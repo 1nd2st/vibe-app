@@ -7,18 +7,14 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { captureRef } from "react-native-view-shot";
-import { Canvas, Path, Skia, SkPath } from "@shopify/react-native-skia";
+import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useSharedValue } from "react-native-reanimated";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "SignCollection">;
   route: RouteProp<RootStackParamList, "SignCollection">;
 };
-
-interface PathData {
-  path: SkPath;
-  color: string;
-}
 
 export default function SignCollectionScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
@@ -30,7 +26,8 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   );
   const signCollection = useCollectionStore((s) => s.signCollection);
 
-  const [paths, setPaths] = useState<PathData[]>([]);
+  const [paths, setPaths] = useState<string[]>([]);
+  const [currentPath, setCurrentPath] = useState("");
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
 
@@ -43,23 +40,15 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   }, 0) || 0;
 
   const pan = Gesture.Pan()
-    .onStart((e) => {
-      const newPath = Skia.Path.Make();
-      newPath.moveTo(e.x, e.y);
-      setPaths((prev) => [...prev, { path: newPath, color: "#000000" }]);
+    .onBegin((e) => {
+      setCurrentPath(`M ${e.x} ${e.y}`);
     })
     .onUpdate((e) => {
-      setPaths((prev) => {
-        const currentPath = prev[prev.length - 1];
-        if (currentPath) {
-          const updatedPath = currentPath.path.copy();
-          updatedPath.lineTo(e.x, e.y);
-          const updatedPaths = [...prev];
-          updatedPaths[updatedPaths.length - 1] = { ...currentPath, path: updatedPath };
-          return updatedPaths;
-        }
-        return prev;
-      });
+      setCurrentPath((prev) => `${prev} L ${e.x} ${e.y}`);
+    })
+    .onEnd(() => {
+      setPaths((prev) => [...prev, currentPath]);
+      setCurrentPath("");
     });
 
   if (!collection) {
@@ -76,10 +65,11 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
 
   const clearSignature = () => {
     setPaths([]);
+    setCurrentPath("");
   };
 
   const handleSign = async () => {
-    if (paths.length === 0) {
+    if (paths.length === 0 && !currentPath) {
       Alert.alert("No Signature", "Please provide a signature before submitting.");
       return;
     }
@@ -281,9 +271,18 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           >
             <GestureDetector gesture={pan}>
               <Canvas style={{ flex: 1 }}>
-                {paths.map((p, index) => (
-                  <Path key={index} path={p.path} color={p.color} style="stroke" strokeWidth={3} />
-                ))}
+                {paths.map((pathString, index) => {
+                  const path = Skia.Path.MakeFromSVGString(pathString);
+                  return path ? (
+                    <Path key={index} path={path} color="#000000" style="stroke" strokeWidth={3} />
+                  ) : null;
+                })}
+                {currentPath && (() => {
+                  const path = Skia.Path.MakeFromSVGString(currentPath);
+                  return path ? (
+                    <Path path={path} color="#000000" style="stroke" strokeWidth={3} />
+                  ) : null;
+                })()}
               </Canvas>
             </GestureDetector>
           </View>
@@ -293,9 +292,9 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
       <View className="bg-white border-t border-gray-200 px-6 py-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <Pressable
           onPress={handleSign}
-          disabled={paths.length === 0 || !signerName.trim() || !signerRole.trim()}
+          disabled={(paths.length === 0 && !currentPath) || !signerName.trim() || !signerRole.trim()}
           className={`rounded-xl py-4 items-center ${
-            paths.length > 0 && signerName.trim() && signerRole.trim()
+            (paths.length > 0 || currentPath) && signerName.trim() && signerRole.trim()
               ? "bg-green-600 active:bg-green-700"
               : "bg-gray-300"
           }`}
