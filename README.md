@@ -187,27 +187,70 @@ ItemPhoto {
 ✅ **Persistent storage** - Data saved locally with AsyncStorage
 ✅ **Complete visibility** - See all items before signing
 
+### AI & Automation
+✅ **AI Damage Detection** - GPT-4 Vision or Claude 3.5 Sonnet analyzes photos
+✅ **Auto-detection** - Automatically analyze photos as they're taken (optional)
+✅ **Manual analysis** - Trigger AI analysis on any photo from item detail view
+✅ **Custom prompts** - Configure what the AI should look for
+✅ **Model selection** - Choose between GPT-4o or Claude 3.5 Sonnet
+✅ **Settings page** - Centralized configuration for all AI and printer settings
+
+## Settings & Configuration
+
+Access settings via the gear icon on the Collections screen. The settings page includes:
+
+### AI Damage Detection Settings
+- **Enable/Disable AI** - Toggle AI damage detection on or off
+- **Auto-detect** - Automatically analyze photos when taken
+- **AI Model Selection** - Choose between GPT-4 Vision or Claude 3.5 Sonnet
+- **Custom AI Prompt** - Tell the AI what to look for in photos
+- **Manual Trigger** - Analyze button available in photo note modal when AI is enabled
+
+### Zebra Label Printer Settings (Planned)
+- **Enable/Disable Printer** - Toggle label printing functionality
+- **Printer IP Address** - Network address of Zebra printer
+- **Printer Port** - Default 9100
+- **Label Dimensions** - Width and height in inches (default 3x1)
+- **Printer DPI** - Resolution: 203, 300, or 600 DPI
+
+### General Settings
+- **Company Name** - Your organization name for reports
+- **Reset to Defaults** - Restore all settings to factory defaults
+
+## AI Damage Detection
+
+### Features
+- **Vision AI Analysis**: Uses GPT-4 Vision or Claude 3.5 Sonnet to analyze photos
+- **Automatic Detection**: Can automatically analyze photos as they're captured
+- **Manual Analysis**: Tap "Analyze with AI" button in photo notes
+- **Custom Instructions**: Configure what the AI should look for
+- **AI Notes**: Analysis results clearly marked as "[AI Analysis]"
+- **User Editable**: All AI-generated notes can be edited by users
+
+### How It Works
+1. Enable AI in Settings and optionally enable auto-detect
+2. When taking photos, AI automatically analyzes if auto-detect is on
+3. Alternatively, open any photo's note modal and tap "Analyze with AI"
+4. AI examines the photo and generates a condition report
+5. Results appear in the note field with "[AI Analysis]" header
+6. Edit or append to AI-generated notes as needed
+
 ## Future Enhancements
 
-### AI Damage Detection (Planned)
-The data structure includes fields for AI analysis:
-- `aiDetectedDamage`: AI-generated damage description
-- `aiAnalyzed`: Flag indicating AI processing status
+### Additional Features (In Progress)
+- **Image Annotation** - Draw on photos to mark damage locations
+- **QR Code Generation** - Generate QR codes for collections and items
+- **QR Code Scanning** - Quick item and collection identification
+- **Zebra Label Printing** - Print QR code labels with ZPL commands
+- **PDF Export** - Generate printable PDF reports (requires expo-print package)
+- **Customer Management** - Pick existing customers or create new ones
+- **View-Only Mode** - Prevent modifications to signed collections
 
-To implement:
-1. Send photos to vision AI API (OpenAI GPT-4 Vision, Anthropic Claude, etc.)
-2. Request analysis of visible damage or condition issues
-3. Store AI notes separately from user notes
-4. Allow users to edit or override AI descriptions
-5. Make AI analysis optional per user preference
-
-### Additional Features (Recommendations)
+### Long-Term Recommendations
 - **Cloud sync** - Backup collections to cloud storage
 - **Team collaboration** - Share collections between team members
-- **Barcode/QR scanning** - Quick item identification
 - **Custom templates** - Pre-fill common item types
 - **Analytics dashboard** - Track collection trends and statistics
-- **PDF export** - Generate printable PDF reports (requires expo-print package)
 - **Photo comparison** - Before/after condition comparison
 - **Integration APIs** - Connect with warehouse management systems
 
@@ -252,6 +295,10 @@ All data is stored locally using AsyncStorage and persists between app sessions.
 ✅ **Export functionality** - Email and share collection reports
 ✅ **Professional reports** - Formatted text reports with all details
 ✅ **Better workflow** - Clear progression through collection steps
+✅ **Settings page** - Centralized configuration for AI and printer
+✅ **AI damage detection** - GPT-4 Vision or Claude 3.5 Sonnet integration
+✅ **Auto-analysis** - Optional automatic photo analysis
+✅ **Manual AI trigger** - Analyze button in photo note modal
 
 ## Notes
 - Collections cannot be signed without at least one item

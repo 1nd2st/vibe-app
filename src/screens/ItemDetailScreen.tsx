@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, Image, TextInput, Modal } from "react-native";
+import { View, Text, Pressable, ScrollView, Image, TextInput, Modal, ActivityIndicator } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
+import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { analyzeImageForDamage } from "../services/aiDamageDetection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ItemDetail">;
@@ -18,10 +20,12 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
 
   const item = useCollectionStore((s) => s.getItem(itemId));
   const updateItem = useCollectionStore((s) => s.updateItem);
+  const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   if (!item) {
     return (
@@ -53,6 +57,37 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     setShowNoteModal(false);
     setNoteText("");
     setSelectedPhotoIndex(null);
+  };
+
+  const analyzeWithAI = async () => {
+    if (selectedPhotoIndex === null) return;
+
+    setIsAnalyzing(true);
+    try {
+      const photo = item.photos[selectedPhotoIndex];
+      const result = await analyzeImageForDamage(photo.uri);
+
+      if (result) {
+        // Append AI analysis to existing note or set as new note
+        const currentNote = noteText.trim();
+        if (currentNote) {
+          setNoteText(`${currentNote}\n\n[AI Analysis]\n${result}`);
+        } else {
+          setNoteText(`[AI Analysis]\n${result}`);
+        }
+      }
+    } catch (error) {
+      console.error("AI analysis failed:", error);
+      // Show error to user
+      setNoteText((prev) => {
+        const currentNote = prev.trim();
+        return currentNote
+          ? `${currentNote}\n\n[AI Analysis Failed - Please try again]`
+          : "[AI Analysis Failed - Please try again]";
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -222,6 +257,28 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             <Text className="text-sm text-gray-600 mb-3">
               Describe any damage, wear, or notable features visible in this photo
             </Text>
+
+            {aiEnabled && (
+              <Pressable
+                onPress={analyzeWithAI}
+                disabled={isAnalyzing}
+                className={`flex-row items-center justify-center border-2 border-blue-600 rounded-xl py-3 mb-3 ${
+                  isAnalyzing ? "opacity-50" : "active:bg-blue-50"
+                }`}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <ActivityIndicator size="small" color="#2563EB" />
+                    <Text className="text-blue-600 text-base font-semibold ml-2">Analyzing with AI...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="sparkles" size={20} color="#2563EB" />
+                    <Text className="text-blue-600 text-base font-semibold ml-2">Analyze with AI</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
 
             <TextInput
               className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"

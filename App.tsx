@@ -13,6 +13,7 @@ import AddItemScreen from "./src/screens/AddItemScreen";
 import CameraScreen from "./src/screens/CameraScreen";
 import ItemDetailScreen from "./src/screens/ItemDetailScreen";
 import SignCollectionScreen from "./src/screens/SignCollectionScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
@@ -71,6 +72,7 @@ export default function App() {
               component={SignCollectionScreen}
               options={{ presentation: "modal" }}
             />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
           </Stack.Navigator>
           <StatusBar style="auto" />
         </NavigationContainer>

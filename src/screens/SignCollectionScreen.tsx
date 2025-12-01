@@ -48,12 +48,15 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   };
 
   const addToPath = (x: number, y: number) => {
-    pathString.value = pathString.value + ` L ${x} ${y}`;
-    setCurrentPath(pathString.value);
+    const newPath = pathString.value + ` L ${x} ${y}`;
+    pathString.value = newPath;
+    setCurrentPath(newPath);
   };
 
   const finishPath = () => {
-    setPaths((prev) => [...prev, pathString.value]);
+    if (pathString.value) {
+      setPaths((prev) => [...prev, pathString.value]);
+    }
     setCurrentPath("");
     pathString.value = "";
   };

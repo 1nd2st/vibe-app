@@ -6,4 +6,5 @@ export type RootStackParamList = {
   ItemDetail: { itemId: string; collectionId: string };
   Camera: { collectionId: string; itemId?: string };
   SignCollection: { collectionId: string };
+  Settings: undefined;
 };

@@ -2,12 +2,14 @@ import React, { useState, useRef } from "react";
 import { View, Text, Pressable, TextInput, Modal, FlatList, Image } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import { useCollectionStore } from "../state/collectionStore";
+import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import type { ItemPhoto } from "../types/collection";
+import { analyzeImageForDamage } from "../services/aiDamageDetection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Camera">;
@@ -30,6 +32,8 @@ export default function CameraScreen({ navigation, route }: Props) {
 
   const item = useCollectionStore((s) => s.getItem(itemId || ""));
   const updateItem = useCollectionStore((s) => s.updateItem);
+  const aiAutoDetect = useSettingsStore((s) => s.settings.aiAutoDetect);
+  const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;
@@ -65,7 +69,31 @@ export default function CameraScreen({ navigation, route }: Props) {
           timestamp: Date.now(),
           aiAnalyzed: false,
         };
-        setPhotos([...photos, newPhoto]);
+
+        // Add photo to array first
+        const updatedPhotos = [...photos, newPhoto];
+        setPhotos(updatedPhotos);
+
+        // Auto-analyze if enabled
+        if (aiEnabled && aiAutoDetect) {
+          try {
+            const aiResult = await analyzeImageForDamage(photo.uri);
+            if (aiResult) {
+              // Update the photo with AI analysis
+              const photoIndex = updatedPhotos.length - 1;
+              updatedPhotos[photoIndex] = {
+                ...updatedPhotos[photoIndex],
+                aiDetectedDamage: aiResult,
+                aiAnalyzed: true,
+                conditionNotes: `[AI Analysis]\n${aiResult}`,
+              };
+              setPhotos([...updatedPhotos]);
+            }
+          } catch (aiError) {
+            console.error("Auto AI analysis failed:", aiError);
+            // Continue even if AI fails
+          }
+        }
       }
     } catch (error) {
       console.error("Error taking picture:", error);

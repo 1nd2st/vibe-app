@@ -46,8 +46,18 @@ export default function CollectionsScreen({ navigation }: Props) {
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="bg-white px-6 py-4 border-b border-gray-200">
-        <Text className="text-3xl font-bold text-gray-900 mb-1">Collections</Text>
-        <Text className="text-sm text-gray-500">Art logistics & condition reports</Text>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-1">
+            <Text className="text-3xl font-bold text-gray-900 mb-1">Collections</Text>
+            <Text className="text-sm text-gray-500">Art logistics & condition reports</Text>
+          </View>
+          <Pressable
+            onPress={() => navigation.navigate("Settings")}
+            className="w-10 h-10 items-center justify-center active:opacity-70"
+          >
+            <Ionicons name="settings-outline" size={24} color="#111827" />
+          </Pressable>
+        </View>
       </View>
 
       {/* Search Bar */}
