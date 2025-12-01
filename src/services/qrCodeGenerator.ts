@@ -104,27 +104,23 @@ export const generateQRCodeSVG = (matrix: QRCodeData, moduleSize: number = 10): 
 };
 
 /**
- * Generate QR code as base64 data URI for collection
+ * Generate QR code as SVG string for collection
  * @param collectionId - Collection ID to encode
- * @returns Base64 data URI string
+ * @returns SVG string that can be rendered
  */
 export const generateCollectionQRCode = (collectionId: string): string => {
   const matrix = generateQRCodeMatrix(collectionId);
-  const svg = generateQRCodeSVG(matrix);
-  const base64 = Buffer.from(svg).toString("base64");
-  return `data:image/svg+xml;base64,${base64}`;
+  return generateQRCodeSVG(matrix);
 };
 
 /**
- * Generate QR code as base64 data URI for item
+ * Generate QR code as SVG string for item
  * @param itemId - Item ID to encode
- * @returns Base64 data URI string
+ * @returns SVG string that can be rendered
  */
 export const generateItemQRCode = (itemId: string): string => {
   const matrix = generateQRCodeMatrix(itemId);
-  const svg = generateQRCodeSVG(matrix);
-  const base64 = Buffer.from(svg).toString("base64");
-  return `data:image/svg+xml;base64,${base64}`;
+  return generateQRCodeSVG(matrix);
 };
 
 /**

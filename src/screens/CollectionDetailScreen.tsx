@@ -121,6 +121,16 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           )}
         </View>
 
+        {/* View Only Banner */}
+        {collection.status === "signed" && (
+          <View className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3 flex-row items-center">
+            <Ionicons name="lock-closed" size={20} color="#D97706" />
+            <Text className="text-amber-800 text-sm font-medium ml-2 flex-1">
+              This collection is locked and cannot be modified
+            </Text>
+          </View>
+        )}
+
         {/* Progress Bar */}
         <View className="mb-3">
           <View className="flex-row items-center justify-between mb-2">

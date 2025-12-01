@@ -51,12 +51,20 @@ export default function CollectionsScreen({ navigation }: Props) {
             <Text className="text-3xl font-bold text-gray-900 mb-1">Collections</Text>
             <Text className="text-sm text-gray-500">Art logistics & condition reports</Text>
           </View>
-          <Pressable
-            onPress={() => navigation.navigate("Settings")}
-            className="w-10 h-10 items-center justify-center active:opacity-70"
-          >
-            <Ionicons name="settings-outline" size={24} color="#111827" />
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={() => navigation.navigate("QRScanner")}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="qr-code-outline" size={24} color="#111827" />
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate("Settings")}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="settings-outline" size={24} color="#111827" />
+            </Pressable>
+          </View>
         </View>
       </View>
 

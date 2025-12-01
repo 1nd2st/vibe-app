@@ -48,16 +48,33 @@ This app streamlines the collection process for art logistics companies by provi
 - Photo indicators show which photos have notes attached
 - Real-time photo preview strip
 - Individual photo deletion
-- Camera properly unmounts when finished
+- **AI Damage Detection**: Automatically or manually analyze photos for damage (GPT-4 Vision or Claude 3.5 Sonnet)
+- AI-generated condition notes clearly marked and editable
 
-### 6. **Item Detail View**
+### 6. **QR Code System**
+- Generate unique QR codes for each collection and item
+- Scan QR codes to instantly navigate to collections or items
+- QR codes contain collection/item IDs for external system integration
+- Scanner accessible from main Collections screen
+
+### 7. **Zebra Label Printing**
+- Generate ZPL (Zebra Programming Language) code for label printing
+- Labels include QR code, human-readable ID, and item description
+- Configurable label dimensions (width × height in inches)
+- Support for 203, 300, and 600 DPI printers
+- Print via network (IP address configuration in settings)
+- Company branding on labels
+
+### 8. **Item Detail View**
 - View all item photos in a grid layout
 - Complete item specifications display
 - Overall condition report with color-coded badges
 - Photo-specific condition notes organized by photo number
 - Tap photos to add or edit condition notes
+- **AI Analyze Button**: Manually trigger AI damage detection on any photo
+- AI analysis results appear with "[AI Analysis]" tag
 
-### 7. **Digital Signature Collection**
+### 9. **Digital Signature Collection**
 - Comprehensive collection summary before signing
 - **Shows all collected items** with:
   - Item thumbnails (first 4 photos per item)
@@ -72,7 +89,7 @@ This app streamlines the collection process for art logistics companies by provi
 - Prevents signing without items added
 - Enforces completion workflow before signing
 
-### 8. **Export & Sharing**
+### 10. **Export & Sharing**
 - **Email Report**: Send detailed collection report via email
 - **Share Report**: Export as text file and share via any app
 - Professional formatted reports include:
@@ -84,7 +101,15 @@ This app streamlines the collection process for art logistics companies by provi
   - Timestamp and collection IDs
 - Easy access via share icon in collection detail header
 
-### 9. **Collection Workflow**
+### 11. **View-Only Mode**
+- Signed collections are automatically locked
+- Visual "locked" banner displayed prominently
+- All edit buttons hidden for signed collections
+- Cannot add new items to signed collections
+- Cannot modify existing items or collection details
+- Export and viewing still available
+
+### 12. **Collection Workflow**
 1. **Create Collection** (25%) → Enter customer and collection details
 2. **Add Items** (50%) → Document items with photos and condition reports
 3. **Mark as Completed** (75%) → Review all items
@@ -138,33 +163,38 @@ ItemPhoto {
   uri: string
   timestamp: number
   conditionNotes?: string
-  aiDetectedDamage?: string     // Reserved for future AI integration
-  aiAnalyzed?: boolean          // Reserved for future AI integration
+  aiDetectedDamage?: string     // AI-generated damage description
+  aiAnalyzed?: boolean          // Flag indicating AI processing status
 }
 ```
 
 ### Navigation Stack
-- **Collections** - Main list view with search
+- **Collections** - Main list view with search and QR scanner access
 - **NewCollection** - Modal for creating collections
 - **CollectionDetail** - View collection with progress indicator and export
 - **AddItem** - Modal for item details entry
-- **Camera** - Full-screen camera for photo capture
-- **ItemDetail** - View item details and photos
+- **Camera** - Full-screen camera for photo capture with optional AI auto-analysis
+- **ItemDetail** - View item details and photos with AI analyze button
 - **SignCollection** - Modal for signature capture with full item list
+- **Settings** - Configuration for AI and printer settings
+- **QRScanner** - Full-screen QR code scanner for quick navigation
 
 ### Technologies Used
 - **Expo SDK 53** with React Native 0.76.7
 - **React Navigation** (Native Stack)
-- **Expo Camera** for photo capture
+- **Expo Camera** for photo capture and QR code scanning
 - **React Native Skia** for signature drawing
 - **React Native Gesture Handler** for touch interactions
+- **React Native SVG** for QR code generation
 - **Zustand** for state management
-- **NativeWind** (TailwindCSS) for styling
+- **NativeWind** (TailwindCSS v4) for styling
 - **AsyncStorage** for data persistence
 - **React Native View Shot** for signature capture
 - **Expo Mail Composer** for email functionality
 - **Expo Sharing** for report export
-- **Expo File System** for report generation
+- **Expo File System** for report generation and image handling
+- **OpenAI GPT-4 Vision** for AI damage detection
+- **Anthropic Claude 3.5 Sonnet** for AI damage detection (alternative model)
 
 ## Improvements Inspired by Articheck
 

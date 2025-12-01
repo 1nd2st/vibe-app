@@ -70,29 +70,36 @@ export default function CameraScreen({ navigation, route }: Props) {
           aiAnalyzed: false,
         };
 
-        // Add photo to array first
-        const updatedPhotos = [...photos, newPhoto];
-        setPhotos(updatedPhotos);
+        // Add photo to array immediately
+        setPhotos((prevPhotos) => [...prevPhotos, newPhoto]);
 
-        // Auto-analyze if enabled
+        // Run AI analysis in background without blocking
         if (aiEnabled && aiAutoDetect) {
-          try {
-            const aiResult = await analyzeImageForDamage(photo.uri);
-            if (aiResult) {
-              // Update the photo with AI analysis
-              const photoIndex = updatedPhotos.length - 1;
-              updatedPhotos[photoIndex] = {
-                ...updatedPhotos[photoIndex],
-                aiDetectedDamage: aiResult,
-                aiAnalyzed: true,
-                conditionNotes: `[AI Analysis]\n${aiResult}`,
-              };
-              setPhotos([...updatedPhotos]);
+          // Use setTimeout to run AI analysis asynchronously without blocking UI
+          setTimeout(async () => {
+            try {
+              const aiResult = await analyzeImageForDamage(photo.uri);
+              if (aiResult) {
+                // Update the specific photo with AI analysis
+                setPhotos((prevPhotos) => {
+                  const photoIndex = prevPhotos.findIndex((p) => p.id === newPhoto.id);
+                  if (photoIndex === -1) return prevPhotos;
+
+                  const updated = [...prevPhotos];
+                  updated[photoIndex] = {
+                    ...updated[photoIndex],
+                    aiDetectedDamage: aiResult,
+                    aiAnalyzed: true,
+                    conditionNotes: `[AI Analysis]\n${aiResult}`,
+                  };
+                  return updated;
+                });
+              }
+            } catch (aiError) {
+              console.error("Auto AI analysis failed:", aiError);
+              // Silently fail - don't block photo capture
             }
-          } catch (aiError) {
-            console.error("Auto AI analysis failed:", aiError);
-            // Continue even if AI fails
-          }
+          }, 100);
         }
       }
     } catch (error) {

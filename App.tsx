@@ -14,6 +14,7 @@ import CameraScreen from "./src/screens/CameraScreen";
 import ItemDetailScreen from "./src/screens/ItemDetailScreen";
 import SignCollectionScreen from "./src/screens/SignCollectionScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import QRScannerScreen from "./src/screens/QRScannerScreen";
 
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
@@ -73,6 +74,11 @@ export default function App() {
               options={{ presentation: "modal" }}
             />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen
+              name="QRScanner"
+              component={QRScannerScreen}
+              options={{ presentation: "fullScreenModal" }}
+            />
           </Stack.Navigator>
           <StatusBar style="auto" />
         </NavigationContainer>

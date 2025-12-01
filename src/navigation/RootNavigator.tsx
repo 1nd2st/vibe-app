@@ -7,4 +7,5 @@ export type RootStackParamList = {
   Camera: { collectionId: string; itemId?: string };
   SignCollection: { collectionId: string };
   Settings: undefined;
+  QRScanner: undefined;
 };
