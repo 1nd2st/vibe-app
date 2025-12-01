@@ -9,7 +9,7 @@ import { RootStackParamList } from "../navigation/RootNavigator";
 import { captureRef } from "react-native-view-shot";
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { useSharedValue } from "react-native-reanimated";
+import { useSharedValue, runOnJS } from "react-native-reanimated";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "SignCollection">;
@@ -39,16 +39,34 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     return sum + valueInUSD;
   }, 0) || 0;
 
+  // Use shared values for gesture handling
+  const pathString = useSharedValue("");
+
+  const startPath = (x: number, y: number) => {
+    setCurrentPath(`M ${x} ${y}`);
+    pathString.value = `M ${x} ${y}`;
+  };
+
+  const addToPath = (x: number, y: number) => {
+    pathString.value = pathString.value + ` L ${x} ${y}`;
+    setCurrentPath(pathString.value);
+  };
+
+  const finishPath = () => {
+    setPaths((prev) => [...prev, pathString.value]);
+    setCurrentPath("");
+    pathString.value = "";
+  };
+
   const pan = Gesture.Pan()
     .onBegin((e) => {
-      setCurrentPath(`M ${e.x} ${e.y}`);
+      runOnJS(startPath)(e.x, e.y);
     })
     .onUpdate((e) => {
-      setCurrentPath((prev) => `${prev} L ${e.x} ${e.y}`);
+      runOnJS(addToPath)(e.x, e.y);
     })
     .onEnd(() => {
-      setPaths((prev) => [...prev, currentPath]);
-      setCurrentPath("");
+      runOnJS(finishPath)();
     });
 
   if (!collection) {
@@ -66,6 +84,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   const clearSignature = () => {
     setPaths([]);
     setCurrentPath("");
+    pathString.value = "";
   };
 
   const handleSign = async () => {
