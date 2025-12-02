@@ -11,6 +11,7 @@ import { useSharedValue, runOnJS } from "react-native-reanimated";
 import * as FileSystem from "expo-file-system";
 import { useCollectionStore } from "../state/collectionStore";
 import { captureRef } from "react-native-view-shot";
+import ViewShot from "react-native-view-shot";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PhotoAnnotation">;
@@ -21,6 +22,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { itemId, photoId } = route.params;
   const canvasRef = useRef<any>(null);
+  const viewShotRef = useRef<any>(null);
 
   const item = useCollectionStore((s) => s.getItem(itemId));
   const updateItem = useCollectionStore((s) => s.updateItem);
@@ -144,8 +146,8 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
     }
 
     try {
-      // Capture the annotated image as a composite
-      const annotatedImageUri = await captureRef(canvasRef, {
+      // Capture the annotated image as a composite using ViewShot
+      const annotatedImageUri = await captureRef(viewShotRef, {
         format: "png",
         quality: 1,
       });
@@ -198,46 +200,48 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
       </View>
 
       {/* Annotation Canvas */}
-      <View
-        className="flex-1"
-        onLayout={(e) => {
-          const { width, height } = e.nativeEvent.layout;
-          setCanvasSize({ width, height });
-        }}
-      >
-        <GestureDetector gesture={pan}>
-          <Canvas ref={canvasRef} style={{ flex: 1 }}>
-            {image && (
-              <SkiaImage
-                image={image}
-                fit="contain"
-                x={0}
-                y={0}
-                width={canvasSize.width}
-                height={canvasSize.height}
-              />
-            )}
-            {paths.map((pathData, index) => {
-              const path = Skia.Path.MakeFromSVGString(pathData.path);
-              return path ? (
-                <Path
-                  key={index}
-                  path={path}
-                  color={pathData.color}
-                  style="stroke"
-                  strokeWidth={pathData.width}
+      <ViewShot ref={viewShotRef} style={{ flex: 1 }}>
+        <View
+          className="flex-1"
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setCanvasSize({ width, height });
+          }}
+        >
+          <GestureDetector gesture={pan}>
+            <Canvas ref={canvasRef} style={{ flex: 1 }}>
+              {image && (
+                <SkiaImage
+                  image={image}
+                  fit="contain"
+                  x={0}
+                  y={0}
+                  width={canvasSize.width}
+                  height={canvasSize.height}
                 />
-              ) : null;
-            })}
-            {currentDrawing && (() => {
-              const path = Skia.Path.MakeFromSVGString(currentDrawing);
-              return path ? (
-                <Path path={path} color={drawColor} style="stroke" strokeWidth={strokeWidth} />
-              ) : null;
-            })()}
-          </Canvas>
-        </GestureDetector>
-      </View>
+              )}
+              {paths.map((pathData, index) => {
+                const path = Skia.Path.MakeFromSVGString(pathData.path);
+                return path ? (
+                  <Path
+                    key={index}
+                    path={path}
+                    color={pathData.color}
+                    style="stroke"
+                    strokeWidth={pathData.width}
+                  />
+                ) : null;
+              })}
+              {currentDrawing && (() => {
+                const path = Skia.Path.MakeFromSVGString(currentDrawing);
+                return path ? (
+                  <Path path={path} color={drawColor} style="stroke" strokeWidth={strokeWidth} />
+                ) : null;
+              })()}
+            </Canvas>
+          </GestureDetector>
+        </View>
+      </ViewShot>
 
       {/* Tools */}
       <View className="bg-black/90 px-6 py-4" style={{ paddingBottom: insets.bottom + 16 }}>
