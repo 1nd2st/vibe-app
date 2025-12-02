@@ -14,11 +14,15 @@ export default function CollectionsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const collections = useCollectionStore((s) => s.collections);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "signed">("all");
 
-  const filteredCollections = collections.filter((col) =>
-    col.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    col.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCollections = collections.filter((col) => {
+    const matchesSearch =
+      col.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      col.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || col.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -70,7 +74,7 @@ export default function CollectionsScreen({ navigation }: Props) {
 
       {/* Search Bar */}
       <View className="bg-white px-6 py-3 border-b border-gray-200">
-        <View className="flex-row items-center bg-gray-100 rounded-xl px-4 py-3">
+        <View className="flex-row items-center bg-gray-100 rounded-xl px-4 py-3 mb-3">
           <Ionicons name="search" size={20} color="#6B7280" />
           <TextInput
             className="flex-1 ml-2 text-base text-gray-900"
@@ -79,6 +83,66 @@ export default function CollectionsScreen({ navigation }: Props) {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+        </View>
+
+        {/* Status Filter */}
+        <View className="flex-row gap-2">
+          <Pressable
+            onPress={() => setStatusFilter("all")}
+            className={`flex-1 rounded-lg py-2 items-center ${
+              statusFilter === "all" ? "bg-blue-600" : "bg-gray-100"
+            }`}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                statusFilter === "all" ? "text-white" : "text-gray-700"
+              }`}
+            >
+              All
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setStatusFilter("in_progress")}
+            className={`flex-1 rounded-lg py-2 items-center ${
+              statusFilter === "in_progress" ? "bg-amber-600" : "bg-gray-100"
+            }`}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                statusFilter === "in_progress" ? "text-white" : "text-gray-700"
+              }`}
+            >
+              In Progress
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setStatusFilter("completed")}
+            className={`flex-1 rounded-lg py-2 items-center ${
+              statusFilter === "completed" ? "bg-blue-600" : "bg-gray-100"
+            }`}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                statusFilter === "completed" ? "text-white" : "text-gray-700"
+              }`}
+            >
+              Completed
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setStatusFilter("signed")}
+            className={`flex-1 rounded-lg py-2 items-center ${
+              statusFilter === "signed" ? "bg-green-600" : "bg-gray-100"
+            }`}
+          >
+            <Text
+              className={`text-sm font-semibold ${
+                statusFilter === "signed" ? "text-white" : "text-gray-700"
+              }`}
+            >
+              Signed
+            </Text>
+          </Pressable>
         </View>
       </View>
 

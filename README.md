@@ -4,6 +4,42 @@ A professional mobile application for art moving and logistics companies to docu
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
+### **Advanced UX Features** (NEW - Dec 2, 2025)
+- ✅ **Breadcrumb Navigation** - Visual navigation path on all detail screens (Home > Customer > Item)
+  - Clickable breadcrumb items navigate back to previous screens
+  - Always know your current location in the app
+  - Clean, compact design with chevron separators
+- ✅ **Long-Press Context Menus** - Quick actions on items without opening them
+  - Long-press any item in collection list to see "View Details" and "Delete" options
+  - Native iOS/Android context menu using zeego library
+  - Disabled when collection is signed for safety
+- ✅ **Swipe-to-Delete** - Intuitive swipe gesture to delete items
+  - Swipe left on any item to reveal delete button
+  - Smooth animated reveal with red delete action
+  - Automatically disabled for signed collections
+  - Works alongside context menu for flexibility
+- ✅ **Batch Photo Operations** - Select multiple photos at once
+  - "Select" button in photo grid enables selection mode
+  - Tap photos to select/deselect with checkmark indicators
+  - "Select All" and "Delete (X)" buttons for batch operations
+  - Clear visual feedback with blue selection indicators
+- ✅ **Pinch-to-Zoom Photos** - Full-screen zoomable photo viewer
+  - Long-press any photo to open full-screen zoom view
+  - Pinch to zoom in/out (1x to 4x zoom)
+  - Pan to explore zoomed images
+  - Double-tap to reset or zoom to 2x
+- ✅ **Search & Filter** - Find collections quickly
+  - Search bar on Collections screen (search by customer or ID)
+  - Status filter buttons: All, In Progress, Completed, Signed
+  - Color-coded filter buttons match status colors
+  - Real-time filtering as you type
+- ✅ **Undo/Redo System** - Recover from accidental deletions
+  - Delete item → See undo toast for 30 seconds
+  - Tap "Undo" button to instantly restore deleted item
+  - Keeps last 10 deletions in memory
+  - Auto-expires after 30 seconds for clean state
+  - Only works for unsigned collections
+
 ### **Keyboard Management**
 - ✅ **All modals now use KeyboardAvoidingView** - Keyboards never overlay input fields
 - ✅ **Smart modal layouts** - Content scrolls properly when keyboard appears

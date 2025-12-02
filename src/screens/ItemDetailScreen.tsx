@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, Image, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, Pressable, ScrollView, Image, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +8,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { analyzeImageForDamage } from "../services/aiDamageDetection";
+import Breadcrumb from "../components/Breadcrumb";
+import ZoomableImage from "../components/ZoomableImage";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ItemDetail">;
@@ -19,6 +21,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const { itemId, collectionId } = route.params;
 
   const item = useCollectionStore((s) => s.getItem(itemId));
+  const collection = useCollectionStore((s) => s.collections.find((c) => c.id === collectionId));
   const updateItem = useCollectionStore((s) => s.updateItem);
   const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
 
@@ -26,6 +29,9 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<number>>(new Set());
+  const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
 
   if (!item) {
     return (
@@ -90,6 +96,43 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     }
   };
 
+  const togglePhotoSelection = (index: number) => {
+    const newSelection = new Set(selectedPhotos);
+    if (newSelection.has(index)) {
+      newSelection.delete(index);
+    } else {
+      newSelection.add(index);
+    }
+    setSelectedPhotos(newSelection);
+  };
+
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedPhotos(new Set());
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedPhotos.size === 0) return;
+
+    Alert.alert(
+      "Delete Photos",
+      `Are you sure you want to delete ${selectedPhotos.size} photo${selectedPhotos.size > 1 ? "s" : ""}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            const updatedPhotos = item.photos.filter((_, index) => !selectedPhotos.has(index));
+            updateItem(itemId, { photos: updatedPhotos });
+            setSelectedPhotos(new Set());
+            setSelectionMode(false);
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -113,39 +156,118 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         </View>
       </View>
 
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: "Home", screen: "Customers" },
+          { label: collection?.customerName || "Customer", screen: "CollectionDetail", params: { collectionId } },
+          { label: item.title },
+        ]}
+      />
+
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         {/* Photos */}
         <View className="bg-white rounded-2xl p-4 mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">Photos ({item.photos.length})</Text>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-semibold text-gray-900">Photos ({item.photos.length})</Text>
+            {item.photos.length > 0 && (
+              <Pressable
+                onPress={toggleSelectionMode}
+                className="active:opacity-70"
+              >
+                <Text className="text-blue-600 font-medium">
+                  {selectionMode ? "Cancel" : "Select"}
+                </Text>
+              </Pressable>
+            )}
+          </View>
           {item.photos.length > 0 ? (
-            <View className="flex-row flex-wrap gap-2">
-              {item.photos.map((photo, index) => (
-                <Pressable
-                  key={photo.id}
-                  onPress={() => openNoteModal(index)}
-                  className="relative"
-                >
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={{ width: 100, height: 100 }}
-                    className="rounded-xl"
-                  />
-                  {photo.conditionNotes && (
-                    <View className="absolute top-2 right-2 w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
-                      <Ionicons name="document-text" size={14} color="#FFFFFF" />
-                    </View>
-                  )}
-                  {photo.annotationData && (
-                    <View className="absolute top-2 left-2 w-6 h-6 bg-orange-600 rounded-full items-center justify-center">
-                      <Ionicons name="brush" size={12} color="#FFFFFF" />
-                    </View>
-                  )}
-                  <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded">
-                    <Text className="text-white text-xs">{index + 1}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
+            <>
+              <View className="flex-row flex-wrap gap-2">
+                {item.photos.map((photo, index) => (
+                  <Pressable
+                    key={photo.id}
+                    onPress={() => {
+                      if (selectionMode) {
+                        togglePhotoSelection(index);
+                      } else {
+                        openNoteModal(index);
+                      }
+                    }}
+                    onLongPress={() => {
+                      if (!selectionMode) {
+                        setZoomImageUri(photo.uri);
+                      }
+                    }}
+                    className="relative"
+                  >
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={{ width: 100, height: 100 }}
+                      className="rounded-xl"
+                    />
+                    {selectionMode && (
+                      <View
+                        className={`absolute top-2 right-2 w-6 h-6 rounded-full items-center justify-center ${
+                          selectedPhotos.has(index) ? "bg-blue-600" : "bg-white/80"
+                        }`}
+                        style={{
+                          borderWidth: selectedPhotos.has(index) ? 0 : 2,
+                          borderColor: "#FFFFFF",
+                        }}
+                      >
+                        {selectedPhotos.has(index) && (
+                          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                        )}
+                      </View>
+                    )}
+                    {!selectionMode && photo.conditionNotes && (
+                      <View className="absolute top-2 right-2 w-6 h-6 bg-blue-600 rounded-full items-center justify-center">
+                        <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                      </View>
+                    )}
+                    {!selectionMode && photo.annotationData && (
+                      <View className="absolute top-2 left-2 w-6 h-6 bg-orange-600 rounded-full items-center justify-center">
+                        <Ionicons name="brush" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                    {!selectionMode && (
+                      <View className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded">
+                        <Text className="text-white text-xs">{index + 1}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+              {selectionMode && (
+                <View className="mt-4 flex-row gap-3">
+                  <Pressable
+                    onPress={() => setSelectedPhotos(new Set(item.photos.map((_, i) => i)))}
+                    disabled={selectedPhotos.size === item.photos.length}
+                    className={`flex-1 rounded-xl py-3 items-center ${
+                      selectedPhotos.size === item.photos.length
+                        ? "bg-gray-200"
+                        : "bg-blue-100 active:bg-blue-200"
+                    }`}
+                  >
+                    <Text className="text-blue-700 font-semibold">Select All</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleBatchDelete}
+                    disabled={selectedPhotos.size === 0}
+                    className={`flex-1 rounded-xl py-3 items-center ${
+                      selectedPhotos.size === 0
+                        ? "bg-gray-200"
+                        : "bg-red-600 active:bg-red-700"
+                    }`}
+                  >
+                    <Text className="text-white font-semibold">
+                      Delete ({selectedPhotos.size})
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
           ) : (
             <Text className="text-gray-400 text-center py-4">No photos</Text>
           )}
@@ -386,6 +508,13 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Zoomable Image Modal */}
+      <ZoomableImage
+        visible={zoomImageUri !== null}
+        imageUri={zoomImageUri || ""}
+        onClose={() => setZoomImageUri(null)}
+      />
     </View>
   );
 }

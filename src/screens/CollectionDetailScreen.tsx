@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, FlatList, Pressable, Alert, Modal, Image } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
+import { useUndoStore } from "../state/undoStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { emailCollectionReport, shareCollectionReport } from "../utils/collectionReports";
+import Breadcrumb from "../components/Breadcrumb";
+import SwipeableItem from "../components/SwipeableItem";
+import * as ContextMenu from "zeego/context-menu";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "CollectionDetail">;
@@ -21,10 +25,18 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     s.collections.find((c) => c.id === collectionId)
   );
   const updateCollection = useCollectionStore((s) => s.updateCollection);
+  const deleteItem = useCollectionStore((s) => s.deleteItem);
+  const addItem = useCollectionStore((s) => s.addItem);
+  const getItem = useCollectionStore((s) => s.getItem);
   const customers = useCollectionStore((s) => s.customers);
   const customer = customers.find((c) => c.id === collection?.customerId);
 
+  const addUndoAction = useUndoStore((s) => s.addUndoAction);
+  const getLastUndo = useUndoStore((s) => s.getLastUndo);
+  const removeLastUndo = useUndoStore((s) => s.removeLastUndo);
+
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showUndoToast, setShowUndoToast] = useState(false);
 
   if (!collection) {
     return (
@@ -79,6 +91,47 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const handleShareReport = async () => {
     setShowExportMenu(false);
     await shareCollectionReport(collection);
+  };
+
+  const handleDeleteItem = (itemId: string, itemTitle: string) => {
+    if (collection.status === "signed") {
+      Alert.alert("Cannot Delete", "This collection is signed and locked. Items cannot be deleted.");
+      return;
+    }
+
+    const itemToDelete = getItem(itemId);
+    if (!itemToDelete) return;
+
+    // Store for undo
+    addUndoAction({
+      type: "delete_item",
+      timestamp: Date.now(),
+      data: {
+        item: itemToDelete,
+        collectionId: collection.id,
+      },
+    });
+
+    // Delete the item
+    deleteItem(itemId);
+
+    // Show undo toast
+    setShowUndoToast(true);
+    setTimeout(() => setShowUndoToast(false), 3000);
+  };
+
+  const handleUndo = () => {
+    const lastAction = getLastUndo();
+    if (!lastAction || lastAction.type !== "delete_item") return;
+
+    // Restore the item
+    addItem(lastAction.data.collectionId, lastAction.data.item);
+
+    // Remove from undo stack
+    removeLastUndo();
+
+    // Hide toast
+    setShowUndoToast(false);
   };
 
   // Calculate progress
@@ -159,6 +212,14 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           </View>
         )}
 
+        {/* Breadcrumb */}
+        <Breadcrumb
+          items={[
+            { label: "Home", screen: "Customers" },
+            { label: collection.customerName },
+          ]}
+        />
+
         {/* Multistep Progress Bar */}
         <View className="mb-3">
           <View className="flex-row items-center justify-between mb-2">
@@ -230,58 +291,90 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           </View>
         }
         renderItem={({ item }) => (
-          <Pressable
-            onPress={() => navigation.navigate("ItemDetail", { itemId: item.id, collectionId })}
-            className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 active:bg-gray-50"
+          <SwipeableItem
+            enabled={collection.status !== "signed"}
+            onDelete={() => handleDeleteItem(item.id, item.title)}
           >
-            <View className="flex-row">
-              {item.photos.length > 0 && (
-                <View className="w-20 h-20 bg-gray-100 rounded-xl mr-3 items-center justify-center">
-                  <Ionicons name="image" size={32} color="#9CA3AF" />
-                </View>
-              )}
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900">{item.title}</Text>
-                {item.artistName && (
-                  <Text className="text-sm text-gray-600 mt-0.5">by {item.artistName}</Text>
-                )}
-                <Text className="text-xs text-gray-500 mt-1">
-                  {item.dimensions.length} × {item.dimensions.width} × {item.dimensions.height} {item.dimensions.unit}
-                </Text>
-                <View className="flex-row items-center mt-2">
-                  <View
-                    className={`px-2 py-1 rounded-md ${
-                      item.overallCondition === "Excellent"
-                        ? "bg-green-100"
-                        : item.overallCondition === "Good"
-                        ? "bg-blue-100"
-                        : item.overallCondition === "Fair"
-                        ? "bg-yellow-100"
-                        : "bg-red-100"
-                    }`}
-                  >
-                    <Text
-                      className={`text-xs font-medium ${
-                        item.overallCondition === "Excellent"
-                          ? "text-green-700"
-                          : item.overallCondition === "Good"
-                          ? "text-blue-700"
-                          : item.overallCondition === "Fair"
-                          ? "text-yellow-700"
-                          : "text-red-700"
-                      }`}
-                    >
-                      {item.overallCondition}
-                    </Text>
+            <ContextMenu.Root>
+              <ContextMenu.Trigger>
+                <Pressable
+                  onPress={() => navigation.navigate("ItemDetail", { itemId: item.id, collectionId })}
+                  className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 active:bg-gray-50"
+                >
+                  <View className="flex-row">
+                    {item.photos.length > 0 && (
+                      <View className="w-20 h-20 bg-gray-100 rounded-xl mr-3 items-center justify-center">
+                        <Ionicons name="image" size={32} color="#9CA3AF" />
+                      </View>
+                    )}
+                    <View className="flex-1">
+                      <Text className="text-base font-semibold text-gray-900">{item.title}</Text>
+                      {item.artistName && (
+                        <Text className="text-sm text-gray-600 mt-0.5">by {item.artistName}</Text>
+                      )}
+                      <Text className="text-xs text-gray-500 mt-1">
+                        {item.dimensions.length} × {item.dimensions.width} × {item.dimensions.height} {item.dimensions.unit}
+                      </Text>
+                      <View className="flex-row items-center mt-2">
+                        <View
+                          className={`px-2 py-1 rounded-md ${
+                            item.overallCondition === "Excellent"
+                              ? "bg-green-100"
+                              : item.overallCondition === "Good"
+                              ? "bg-blue-100"
+                              : item.overallCondition === "Fair"
+                              ? "bg-yellow-100"
+                              : "bg-red-100"
+                          }`}
+                        >
+                          <Text
+                            className={`text-xs font-medium ${
+                              item.overallCondition === "Excellent"
+                                ? "text-green-700"
+                                : item.overallCondition === "Good"
+                                ? "text-blue-700"
+                                : item.overallCondition === "Fair"
+                                ? "text-yellow-700"
+                                : "text-red-700"
+                            }`}
+                          >
+                            {item.overallCondition}
+                          </Text>
+                        </View>
+                        <Text className="text-xs text-gray-400 ml-2">
+                          {item.photos.length} photo{item.photos.length !== 1 ? "s" : ""}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                   </View>
-                  <Text className="text-xs text-gray-400 ml-2">
-                    {item.photos.length} photo{item.photos.length !== 1 ? "s" : ""}
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </View>
-          </Pressable>
+                </Pressable>
+              </ContextMenu.Trigger>
+              <ContextMenu.Content>
+                <ContextMenu.Item
+                  key="view"
+                  onSelect={() => navigation.navigate("ItemDetail", { itemId: item.id, collectionId })}
+                >
+                  <ContextMenu.ItemTitle>View Details</ContextMenu.ItemTitle>
+                  <ContextMenu.ItemIcon
+                    ios={{ name: "eye", pointSize: 18 }}
+                  />
+                </ContextMenu.Item>
+                {collection.status !== "signed" && (
+                  <ContextMenu.Item
+                    key="delete"
+                    destructive
+                    onSelect={() => handleDeleteItem(item.id, item.title)}
+                  >
+                    <ContextMenu.ItemTitle>Delete Item</ContextMenu.ItemTitle>
+                    <ContextMenu.ItemIcon
+                      ios={{ name: "trash", pointSize: 18 }}
+                    />
+                  </ContextMenu.Item>
+                )}
+              </ContextMenu.Content>
+            </ContextMenu.Root>
+          </SwipeableItem>
         )}
         ListFooterComponent={
           <View className="mt-4">
@@ -500,6 +593,31 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Undo Toast */}
+      {showUndoToast && (
+        <View
+          className="absolute bottom-20 left-6 right-6 bg-gray-900 rounded-xl p-4 flex-row items-center justify-between"
+          style={{
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          <View className="flex-1 mr-4">
+            <Text className="text-white font-semibold">Item deleted</Text>
+            <Text className="text-gray-300 text-sm">Tap Undo to restore</Text>
+          </View>
+          <Pressable
+            onPress={handleUndo}
+            className="bg-blue-600 rounded-lg px-4 py-2 active:bg-blue-700"
+          >
+            <Text className="text-white font-semibold">Undo</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
