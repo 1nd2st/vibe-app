@@ -77,13 +77,21 @@ export default function AddItemScreen({ navigation, route }: Props) {
       className="flex-1 bg-gray-50"
       style={{ paddingTop: insets.top }}
     >
-      <View className="bg-white px-6 py-4 border-b border-gray-200 flex-row items-center">
-        <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
-          <Ionicons name="close" size={28} color="#111827" />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="text-2xl font-bold text-gray-900">Add Item</Text>
+      <View className="bg-white px-6 py-4 border-b border-gray-200 flex-row items-center justify-between">
+        <View className="flex-row items-center flex-1">
+          <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
+            <Ionicons name="close" size={28} color="#111827" />
+          </Pressable>
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-gray-900">Add Item</Text>
+          </View>
         </View>
+        <Pressable
+          onPress={() => navigation.navigate("Customers")}
+          className="ml-2 active:opacity-70"
+        >
+          <Ionicons name="home-outline" size={24} color="#2563EB" />
+        </Pressable>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
