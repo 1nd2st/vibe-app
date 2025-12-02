@@ -8,7 +8,7 @@ import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { useSharedValue, runOnJS } from "react-native-reanimated";
+import { useSharedValue, runOnJS, useDerivedValue } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
 
 type Props = {
@@ -29,6 +29,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   const [paths, setPaths] = useState<string[]>([]);
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
+  const [currentDrawing, setCurrentDrawing] = useState("");
 
   // Calculate total value
   const totalValue = collection?.items.reduce((sum, item) => {
@@ -41,17 +42,28 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   // Use shared values for gesture handling
   const currentPathString = useSharedValue("");
 
+  const updateDrawing = (pathStr: string) => {
+    setCurrentDrawing(pathStr);
+  };
+
+  const addPath = (pathStr: string) => {
+    setPaths((prev) => [...prev, pathStr]);
+  };
+
   const pan = Gesture.Pan()
     .onStart((e) => {
       currentPathString.value = `M ${e.x} ${e.y}`;
+      runOnJS(updateDrawing)(currentPathString.value);
     })
     .onUpdate((e) => {
       currentPathString.value = currentPathString.value + ` L ${e.x} ${e.y}`;
+      runOnJS(updateDrawing)(currentPathString.value);
     })
     .onEnd(() => {
       if (currentPathString.value) {
-        runOnJS(setPaths)([...paths, currentPathString.value]);
+        runOnJS(addPath)(currentPathString.value);
         currentPathString.value = "";
+        runOnJS(updateDrawing)("");
       }
     })
     .runOnJS(true);
@@ -70,6 +82,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
 
   const clearSignature = () => {
     setPaths([]);
+    setCurrentDrawing("");
     currentPathString.value = "";
   };
 
@@ -283,6 +296,12 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
                     <Path key={index} path={path} color="#000000" style="stroke" strokeWidth={3} />
                   ) : null;
                 })}
+                {currentDrawing && (() => {
+                  const path = Skia.Path.MakeFromSVGString(currentDrawing);
+                  return path ? (
+                    <Path path={path} color="#000000" style="stroke" strokeWidth={3} />
+                  ) : null;
+                })()}
               </Canvas>
             </GestureDetector>
           </View>

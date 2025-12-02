@@ -35,15 +35,35 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
       const photosBase64 = await Promise.all(
         item.photos.slice(0, 4).map(async (photo) => {
           try {
-            const base64 = await FileSystem.readAsStringAsync(photo.uri, {
+            // Use annotated image if available, otherwise use original
+            const imageUri = photo.annotatedImageUri || photo.uri;
+            const base64 = await FileSystem.readAsStringAsync(imageUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
+
+            // Parse annotation data to get labels
+            let annotationLabels: string[] = [];
+            if (photo.annotationData) {
+              try {
+                const data = JSON.parse(photo.annotationData);
+                if (data.paths && Array.isArray(data.paths)) {
+                  annotationLabels = data.paths
+                    .map((p: any) => p.label)
+                    .filter((label: string) => label);
+                }
+              } catch (e) {
+                console.error("Error parsing annotation data:", e);
+              }
+            }
+
             return {
               data: `data:image/jpeg;base64,${base64}`,
               hasAnnotation: !!photo.annotationData,
+              annotationLabels: annotationLabels,
               notes: photo.conditionNotes,
             };
           } catch (error) {
+            console.error("Error reading photo:", error);
             return null;
           }
         })
@@ -309,7 +329,9 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
             ${item.photosBase64.map((photoObj, photoIndex) => `
               <div class="photo-item">
                 <img src="${photoObj.data}" alt="Photo ${photoIndex + 1}">
-                ${photoObj.hasAnnotation ? '<div class="annotation-badge">✏️ Annotated</div>' : ''}
+                ${photoObj.hasAnnotation ? `
+                  <div class="annotation-badge">✏️ ${photoObj.annotationLabels && photoObj.annotationLabels.length > 0 ? photoObj.annotationLabels.join(", ") : "Annotated"}</div>
+                ` : ''}
                 ${photoIndex === 0 && item.photos.length > 4 ? `<div class="photo-count">+${item.photos.length - 4} more</div>` : ''}
               </div>
             `).join('')}

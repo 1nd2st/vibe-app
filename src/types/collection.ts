@@ -34,6 +34,7 @@ export interface ItemPhoto {
   aiAnalyzed?: boolean;
   annotatedUri?: string; // Annotated version of the photo (deprecated - use annotationData)
   annotationData?: string; // JSON string of annotation paths and metadata
+  annotatedImageUri?: string; // Composite image with annotations drawn on top
 }
 
 export interface CollectionItem {

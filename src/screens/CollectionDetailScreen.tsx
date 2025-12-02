@@ -21,6 +21,8 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     s.collections.find((c) => c.id === collectionId)
   );
   const updateCollection = useCollectionStore((s) => s.updateCollection);
+  const customers = useCollectionStore((s) => s.customers);
+  const customer = customers.find((c) => c.id === collection?.customerId);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -337,6 +339,45 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                     </View>
                   </View>
                 )}
+
+                {/* Post-Signature Actions */}
+                <View className="mt-4 space-y-2">
+                  <Pressable
+                    onPress={() => {
+                      if (customer) {
+                        navigation.navigate("CustomerDetail", { customerId: customer.id });
+                      } else {
+                        navigation.navigate("Customers");
+                      }
+                    }}
+                    className="bg-white border border-green-600 rounded-xl py-3 items-center active:bg-green-50 mb-2"
+                  >
+                    <View className="flex-row items-center">
+                      <Ionicons name="person" size={20} color="#16A34A" />
+                      <Text className="text-green-700 text-base font-semibold ml-2">
+                        {customer ? `View ${customer.name}` : "View All Customers"}
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      if (customer) {
+                        navigation.navigate("NewCollection", { customerId: customer.id });
+                      } else {
+                        navigation.navigate("Customers");
+                      }
+                    }}
+                    className="bg-green-600 rounded-xl py-3 items-center active:bg-green-700"
+                  >
+                    <View className="flex-row items-center">
+                      <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                      <Text className="text-white text-base font-semibold ml-2">
+                        {customer ? `New Collection for ${customer.name}` : "Create New Collection"}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
               </View>
             )}
 

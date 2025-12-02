@@ -62,11 +62,11 @@ This app streamlines the collection process for art logistics companies by provi
 - Condition Rating: Excellent, Good, Fair, Poor, or Damaged
 - Each item has unique internal ID for tracking
 
-### 7. **Photo Capture & Condition Reporting (✅ FULLY FEATURED & FIXED)**
-- **Fixed Drawing Issues**: Signature and photo annotation drawing now works perfectly
-  - Improved gesture handling with react-native-reanimated and react-native-gesture-handler
-  - Paths render correctly on canvas
-  - Smooth drawing experience
+### 7. **Photo Capture & Condition Reporting (✅ FULLY FEATURED & ENHANCED)**
+- **Real-Time Drawing**: Signature and photo annotations now show finger movement in real-time
+  - Smooth, responsive drawing experience with immediate visual feedback
+  - Improved gesture handling with react-native-reanimated v3
+  - Paths render correctly on canvas without lag
 - **Smart Photo Annotation** - Draw on photos with color-coded annotation types:
   - 🔴 **Red**: Damage
   - 🟠 **Orange**: Scratch
@@ -74,16 +74,23 @@ This app streamlines the collection process for art logistics companies by provi
   - 🔵 **Blue**: Custom (user can type custom text label)
   - When blue/custom is selected, modal pops up for text input
   - Each annotation is labeled and saved with the photo
+  - Annotations create composite images that appear in reports
   - Adjustable brush sizes (2px, 3px, 5px, 8px)
   - Undo and Clear All functions
   - Annotations persist and reload when viewing photos
+- **Item Detail Photo Management**:
+  - Tap any photo to add/edit condition notes
+  - AI Analyze button for instant damage detection
+  - Annotate Photo button to add visual markup
+  - Keyboard no longer covers text input
+  - Smooth scrolling modal with proper keyboard handling
 - Built-in camera with flash and flip camera controls
 - Take multiple photos per item
 - Add condition notes specific to each photo
 - Photo indicators show which photos have notes attached
 - Real-time photo preview strip
 - Individual photo deletion
-- **AI Damage Detection**: Automatically or manually analyze photos for damage (GPT-4 Vision or Claude 3.5 Sonnet)
+- **AI Damage Detection**: Available in Item Detail screen and camera flow
 - AI-generated condition notes clearly marked and editable
 - **Full image view** - resizeMode="contain" ensures complete photo visibility
 
@@ -105,13 +112,33 @@ This app streamlines the collection process for art logistics companies by provi
 - Print via network (IP address configuration in settings)
 - Company branding on labels
 
-### 10. **Item Detail View**
+### 10. **Item Detail View (✅ ENHANCED)**
 - View all item photos in a grid layout
 - Complete item specifications display
 - Overall condition report with color-coded badges
 - Photo-specific condition notes organized by photo number
+- Tap photos to add/edit notes with AI analysis available
+- Direct access to photo annotation from detail view
 
-### 11. **Settings (✅ KEYBOARD FIXED)**
+### 11. **Collection Reports & Export (✅ FULLY WORKING)**
+- **Professional HTML Reports** with embedded images
+- **Annotations Displayed**: Reports show annotated images with labels
+- Custom field annotations clearly labeled in reports
+- Images properly embedded as base64 in both HTML and email
+- Export via email with full formatting preserved
+- Share as HTML file with all images included
+- Beautiful, print-ready formatting with no branding
+- Signature display with signer information
+
+### 12. **Post-Collection Workflow (✅ NEW)**
+- **Smart Navigation After Signing**:
+  - After collection is signed, users see clear next steps
+  - "View Customer" button to see all collections for the customer
+  - "New Collection" button to start a new collection for same customer
+  - No confusion about what to do next
+  - Easy access to customer list if customer info is missing
+
+### 13. **Settings (✅ KEYBOARD FIXED)**
 - **Fixed Keyboard Overlay**: Keyboard no longer covers text input fields
 - KeyboardAvoidingView properly implemented for iOS and Android
 - Smooth scrolling while typing

@@ -10,6 +10,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue, runOnJS } from "react-native-reanimated";
 import * as FileSystem from "expo-file-system";
 import { useCollectionStore } from "../state/collectionStore";
+import { captureRef } from "react-native-view-shot";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PhotoAnnotation">;
@@ -34,6 +35,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const [showCustomTextModal, setShowCustomTextModal] = useState(false);
   const [customText, setCustomText] = useState("");
   const [pendingPath, setPendingPath] = useState<{ path: string; color: string; width: number } | null>(null);
+  const [currentDrawing, setCurrentDrawing] = useState("");
 
   const currentPathString = useSharedValue("");
 
@@ -72,12 +74,22 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
     );
   }
 
+  const updateDrawing = (pathStr: string) => {
+    setCurrentDrawing(pathStr);
+  };
+
+  const addPathToList = (newPath: { path: string; color: string; width: number; label?: string }) => {
+    setPaths((prev) => [...prev, newPath]);
+  };
+
   const pan = Gesture.Pan()
     .onStart((e) => {
       currentPathString.value = `M ${e.x} ${e.y}`;
+      runOnJS(updateDrawing)(currentPathString.value);
     })
     .onUpdate((e) => {
       currentPathString.value = currentPathString.value + ` L ${e.x} ${e.y}`;
+      runOnJS(updateDrawing)(currentPathString.value);
     })
     .onEnd(() => {
       if (currentPathString.value) {
@@ -90,9 +102,10 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
         } else {
           // Add label based on color for non-custom annotations
           const label = annotationTypes.find(t => t.value === drawColor)?.label;
-          runOnJS(setPaths)([...paths, { ...newPath, label }]);
+          runOnJS(addPathToList)({ ...newPath, label });
         }
         currentPathString.value = "";
+        runOnJS(updateDrawing)("");
       }
     })
     .runOnJS(true);
@@ -114,6 +127,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
 
   const clearAll = () => {
     setPaths([]);
+    setCurrentDrawing("");
     currentPathString.value = "";
   };
 
@@ -130,6 +144,12 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
     }
 
     try {
+      // Capture the annotated image as a composite
+      const annotatedImageUri = await captureRef(canvasRef, {
+        format: "png",
+        quality: 1,
+      });
+
       // Save the annotation paths data so we can recreate them later
       const annotationData = {
         paths: paths,
@@ -137,10 +157,14 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
         canvasSize: canvasSize,
       };
 
-      // Update the photo with annotation data
+      // Update the photo with both annotation data and the composite image
       const updatedPhotos = item.photos.map((p) =>
         p.id === photoId
-          ? { ...p, annotationData: JSON.stringify(annotationData) }
+          ? {
+              ...p,
+              annotationData: JSON.stringify(annotationData),
+              annotatedImageUri: annotatedImageUri, // Save the composite
+            }
           : p
       );
 
@@ -205,6 +229,12 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
                 />
               ) : null;
             })}
+            {currentDrawing && (() => {
+              const path = Skia.Path.MakeFromSVGString(currentDrawing);
+              return path ? (
+                <Path path={path} color={drawColor} style="stroke" strokeWidth={strokeWidth} />
+              ) : null;
+            })()}
           </Canvas>
         </GestureDetector>
       </View>
