@@ -32,7 +32,8 @@ export interface ItemPhoto {
   conditionNotes?: string;
   aiDetectedDamage?: string;
   aiAnalyzed?: boolean;
-  annotatedUri?: string; // Annotated version of the photo
+  annotatedUri?: string; // Annotated version of the photo (deprecated - use annotationData)
+  annotationData?: string; // JSON string of annotation paths and metadata
 }
 
 export interface CollectionItem {

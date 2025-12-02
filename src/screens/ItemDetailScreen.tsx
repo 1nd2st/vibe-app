@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, ScrollView, Image, TextInput, Modal, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ScrollView, Image, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -118,7 +118,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                   className="relative"
                 >
                   <Image
-                    source={{ uri: photo.annotatedUri || photo.uri }}
+                    source={{ uri: photo.uri }}
                     style={{ width: 100, height: 100 }}
                     className="rounded-xl"
                   />
@@ -127,7 +127,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                       <Ionicons name="document-text" size={14} color="#FFFFFF" />
                     </View>
                   )}
-                  {photo.annotatedUri && (
+                  {photo.annotationData && (
                     <View className="absolute top-2 left-2 w-6 h-6 bg-orange-600 rounded-full items-center justify-center">
                       <Ionicons name="brush" size={12} color="#FFFFFF" />
                     </View>
@@ -244,8 +244,12 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
 
       {/* Note Modal */}
       <Modal visible={showNoteModal} animationType="slide" transparent>
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6" style={{ paddingBottom: insets.bottom + 24 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+        >
+          <View className="flex-1 bg-black/50 justify-end">
+            <View className="bg-white rounded-t-3xl p-6" style={{ paddingBottom: insets.bottom + 24 }}>
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-xl font-bold text-gray-900">
                 Photo {selectedPhotoIndex !== null ? selectedPhotoIndex + 1 : ""} Note
@@ -258,13 +262,13 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             {selectedPhotoIndex !== null && (
               <View>
                 <Image
-                  source={{ uri: item.photos[selectedPhotoIndex].annotatedUri || item.photos[selectedPhotoIndex].uri }}
+                  source={{ uri: item.photos[selectedPhotoIndex].uri }}
                   style={{ width: "100%", height: 200 }}
                   className="rounded-xl mb-2"
                   resizeMode="contain"
                 />
-                {item.photos[selectedPhotoIndex].annotatedUri && (
-                  <Text className="text-xs text-green-600 text-center mb-2">✓ Annotated version shown</Text>
+                {item.photos[selectedPhotoIndex].annotationData && (
+                  <Text className="text-xs text-orange-600 text-center mb-2">✓ This photo has annotations</Text>
                 )}
               </View>
             )}
@@ -331,6 +335,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             </Pressable>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

@@ -149,7 +149,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <View className="bg-white rounded-2xl p-4 my-4">
           <Text className="text-lg font-semibold text-gray-900 mb-3">Collection Summary</Text>
           <View className="flex-row justify-between mb-2">

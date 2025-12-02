@@ -17,6 +17,18 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
 
   const totalPhotos = collection.items.reduce((sum, item) => sum + item.photos.length, 0);
 
+  // Convert signature to base64 if exists
+  let signatureBase64 = "";
+  if (collection.signature?.signatureUri) {
+    try {
+      signatureBase64 = await FileSystem.readAsStringAsync(collection.signature.signatureUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+    } catch (error) {
+      console.error("Error reading signature:", error);
+    }
+  }
+
   // Convert images to base64 for embedding
   const itemsWithBase64Photos = await Promise.all(
     collection.items.map(async (item) => {
@@ -26,13 +38,17 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
             const base64 = await FileSystem.readAsStringAsync(photo.uri, {
               encoding: FileSystem.EncodingType.Base64,
             });
-            return `data:image/jpeg;base64,${base64}`;
+            return {
+              data: `data:image/jpeg;base64,${base64}`,
+              hasAnnotation: !!photo.annotationData,
+              notes: photo.conditionNotes,
+            };
           } catch (error) {
-            return "";
+            return null;
           }
         })
       );
-      return { ...item, photosBase64: photosBase64.filter(p => p) };
+      return { ...item, photosBase64: photosBase64.filter(p => p !== null) };
     })
   );
 
@@ -165,6 +181,17 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
       height: 100%;
       object-fit: cover;
     }
+    .annotation-badge {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(251, 146, 60, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
     .photo-count {
       position: absolute;
       bottom: 5px;
@@ -279,9 +306,10 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
 
         ${item.photosBase64.length > 0 ? `
           <div class="photo-grid">
-            ${item.photosBase64.map((photo, photoIndex) => `
+            ${item.photosBase64.map((photoObj, photoIndex) => `
               <div class="photo-item">
-                <img src="${photo}" alt="Photo ${photoIndex + 1}">
+                <img src="${photoObj.data}" alt="Photo ${photoIndex + 1}">
+                ${photoObj.hasAnnotation ? '<div class="annotation-badge">✏️ Annotated</div>' : ''}
                 ${photoIndex === 0 && item.photos.length > 4 ? `<div class="photo-count">+${item.photos.length - 4} more</div>` : ''}
               </div>
             `).join('')}
@@ -330,6 +358,11 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
     <div class="section">
       <div class="signature-box">
         <div class="signature-title">✅ Signed & Approved</div>
+        ${signatureBase64 ? `
+          <div style="margin: 15px 0; padding: 10px; background: white; border: 1px solid #d1d5db; border-radius: 6px;">
+            <img src="data:image/png;base64,${signatureBase64}" alt="Signature" style="max-width: 300px; height: auto; display: block;">
+          </div>
+        ` : ''}
         <p><strong>Name:</strong> ${collection.signature.signerName}</p>
         <p><strong>Role:</strong> ${collection.signature.signerRole}</p>
         <p><strong>Date:</strong> ${new Date(collection.signature.timestamp).toLocaleString()}</p>

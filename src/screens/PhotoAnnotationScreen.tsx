@@ -1,11 +1,11 @@
-import React, { useRef, useState } from "react";
-import { View, Text, Pressable, Alert } from "react-native";
+import React, { useRef, useState, useEffect } from "react";
+import { View, Text, Pressable, Alert, Dimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
-import { Canvas, Path, Skia, Image as SkiaImage, useImage } from "@shopify/react-native-skia";
+import { Canvas, Path, Skia, Image as SkiaImage, useImage, makeImageFromView } from "@shopify/react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue, runOnJS } from "react-native-reanimated";
 import * as FileSystem from "expo-file-system";
@@ -19,6 +19,7 @@ type Props = {
 export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { itemId, photoId } = route.params;
+  const canvasRef = useRef(null);
 
   const item = useCollectionStore((s) => s.getItem(itemId));
   const updateItem = useCollectionStore((s) => s.updateItem);
@@ -30,6 +31,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const [currentPath, setCurrentPath] = useState("");
   const [drawColor, setDrawColor] = useState("#FF0000");
   const [strokeWidth, setStrokeWidth] = useState(3);
+  const [canvasSize, setCanvasSize] = useState({ width: Dimensions.get("window").width, height: 600 });
 
   const pathString = useSharedValue("");
 
@@ -43,6 +45,20 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   ];
 
   const strokeWidths = [2, 3, 5, 8];
+
+  // Load existing annotations when screen opens
+  useEffect(() => {
+    if (photo?.annotationData) {
+      try {
+        const data = JSON.parse(photo.annotationData);
+        if (data.paths && Array.isArray(data.paths)) {
+          setPaths(data.paths);
+        }
+      } catch (error) {
+        console.error("Error loading annotation data:", error);
+      }
+    }
+  }, [photo?.annotationData]);
 
   if (!item || !photo) {
     return (
@@ -105,30 +121,23 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
     }
 
     try {
-      // Since we're drawing directly on the canvas with the image,
-      // we'll just save the paths data and mark as annotated
-      // The actual rendering happens in the Canvas component
-
-      // For now, we'll use a simpler approach: just mark the photo as having annotations
-      // and store the annotation data in a format we can recreate
+      // Save the annotation paths data so we can recreate them later
       const annotationData = {
         paths: paths,
         timestamp: Date.now(),
+        canvasSize: canvasSize,
       };
 
-      // Create a marker that this photo has annotations
-      // In a production app, you'd want to actually composite the images
-      // For now, we'll just note that it's annotated and the Canvas will show it
-      const newUri = `${photo.uri}?annotated=${Date.now()}`;
-
-      // Update the photo with annotation marker
+      // Update the photo with annotation data
       const updatedPhotos = item.photos.map((p) =>
-        p.id === photoId ? { ...p, annotatedUri: newUri } : p
+        p.id === photoId
+          ? { ...p, annotationData: JSON.stringify(annotationData) }
+          : p
       );
 
       updateItem(itemId, { photos: updatedPhotos });
 
-      Alert.alert("Saved", "Annotations saved! (Note: Annotations are shown in the app but not yet permanently saved to the image file)", [
+      Alert.alert("Saved", "Annotations have been saved successfully!", [
         {
           text: "OK",
           onPress: () => navigation.goBack(),
@@ -156,17 +165,23 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
       </View>
 
       {/* Annotation Canvas */}
-      <View className="flex-1">
+      <View
+        className="flex-1"
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setCanvasSize({ width, height });
+        }}
+      >
         <GestureDetector gesture={pan}>
-          <Canvas style={{ flex: 1 }}>
+          <Canvas ref={canvasRef} style={{ flex: 1 }}>
             {image && (
               <SkiaImage
                 image={image}
                 fit="contain"
                 x={0}
                 y={0}
-                width={400}
-                height={800}
+                width={canvasSize.width}
+                height={canvasSize.height}
               />
             )}
             {paths.map((pathData, index) => {
