@@ -247,124 +247,133 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
         >
           <Pressable
-            className="flex-1 bg-black/50"
+            className="flex-1"
             onPress={() => {
               if (!isAnalyzing) {
                 setShowNoteModal(false);
               }
             }}
-          >
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              className="flex-1 justify-end"
-            >
-              <View className="bg-white rounded-t-3xl" style={{ maxHeight: "85%", paddingBottom: insets.bottom + 16 }}>
-                <ScrollView
-                  className="flex-1"
-                  contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={true}
+          />
+          <View className="bg-white rounded-t-3xl" style={{ maxHeight: "80%" }}>
+            {/* Fixed Header */}
+            <View className="px-6 pt-6 pb-4 border-b border-gray-200 bg-white">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xl font-bold text-gray-900">
+                  Photo {selectedPhotoIndex !== null ? selectedPhotoIndex + 1 : ""} Note
+                </Text>
+                <Pressable
+                  onPress={() => {
+                    if (!isAnalyzing) {
+                      setShowNoteModal(false);
+                    }
+                  }}
+                  className="active:opacity-70"
+                  disabled={isAnalyzing}
                 >
-                  <View className="flex-row items-center justify-between mb-4">
-                    <Text className="text-xl font-bold text-gray-900">
-                      Photo {selectedPhotoIndex !== null ? selectedPhotoIndex + 1 : ""} Note
-                    </Text>
-                    <Pressable
-                      onPress={() => setShowNoteModal(false)}
-                      className="active:opacity-70"
-                      disabled={isAnalyzing}
-                    >
-                      <Ionicons name="close" size={28} color={isAnalyzing ? "#9CA3AF" : "#111827"} />
-                    </Pressable>
-                  </View>
-
-                  {selectedPhotoIndex !== null && (
-                    <View>
-                      <Image
-                        source={{ uri: item.photos[selectedPhotoIndex].uri }}
-                        style={{ width: "100%", height: 200 }}
-                        className="rounded-xl mb-2"
-                        resizeMode="contain"
-                      />
-                      {item.photos[selectedPhotoIndex].annotationData && (
-                        <Text className="text-xs text-orange-600 text-center mb-2">✓ This photo has annotations</Text>
-                      )}
-                    </View>
-                  )}
-
-                  <Pressable
-                    onPress={() => {
-                      if (selectedPhotoIndex !== null) {
-                        setShowNoteModal(false);
-                        navigation.navigate("PhotoAnnotation", {
-                          itemId,
-                          photoId: item.photos[selectedPhotoIndex].id,
-                        });
-                      }
-                    }}
-                    disabled={isAnalyzing}
-                    className={`flex-row items-center justify-center bg-orange-600 rounded-xl py-3 mb-3 ${
-                      isAnalyzing ? "opacity-50" : "active:bg-orange-700"
-                    }`}
-                  >
-                    <Ionicons name="brush" size={20} color="#FFFFFF" />
-                    <Text className="text-white text-base font-semibold ml-2">Annotate Photo</Text>
-                  </Pressable>
-
-                  <Text className="text-sm text-gray-600 mb-3">
-                    Describe any damage, wear, or notable features visible in this photo
-                  </Text>
-
-                  {aiEnabled && (
-                    <Pressable
-                      onPress={analyzeWithAI}
-                      disabled={isAnalyzing}
-                      className={`flex-row items-center justify-center border-2 border-blue-600 rounded-xl py-3 mb-3 ${
-                        isAnalyzing ? "opacity-50" : "active:bg-blue-50"
-                      }`}
-                    >
-                      {isAnalyzing ? (
-                        <>
-                          <ActivityIndicator size="small" color="#2563EB" />
-                          <Text className="text-blue-600 text-base font-semibold ml-2">Analyzing with AI...</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Ionicons name="sparkles" size={20} color="#2563EB" />
-                          <Text className="text-blue-600 text-base font-semibold ml-2">Analyze with AI</Text>
-                        </>
-                      )}
-                    </Pressable>
-                  )}
-
-                  <TextInput
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
-                    placeholder="e.g., Small scratch on upper left corner..."
-                    placeholderTextColor="#9CA3AF"
-                    value={noteText}
-                    onChangeText={setNoteText}
-                    multiline
-                    numberOfLines={6}
-                    textAlignVertical="top"
-                    style={{ minHeight: 120, maxHeight: 200 }}
-                    editable={!isAnalyzing}
-                  />
-
-                  <Pressable
-                    onPress={saveNote}
-                    disabled={isAnalyzing}
-                    className={`rounded-xl py-4 items-center ${
-                      isAnalyzing ? "bg-gray-300" : "bg-blue-600 active:bg-blue-700"
-                    }`}
-                  >
-                    <Text className="text-white text-base font-semibold">Save Note</Text>
-                  </Pressable>
-                </ScrollView>
+                  <Ionicons name="close" size={28} color={isAnalyzing ? "#9CA3AF" : "#111827"} />
+                </Pressable>
               </View>
-            </Pressable>
-          </Pressable>
+            </View>
+
+            {/* Scrollable Content */}
+            <ScrollView
+              className="flex-1"
+              contentContainerStyle={{ padding: 24 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={true}
+            >
+              {selectedPhotoIndex !== null && (
+                <View>
+                  <Image
+                    source={{ uri: item.photos[selectedPhotoIndex].uri }}
+                    style={{ width: "100%", height: 180 }}
+                    className="rounded-xl mb-2"
+                    resizeMode="contain"
+                  />
+                  {item.photos[selectedPhotoIndex].annotationData && (
+                    <Text className="text-xs text-orange-600 text-center mb-3">✓ This photo has annotations</Text>
+                  )}
+                </View>
+              )}
+
+              <Pressable
+                onPress={() => {
+                  if (selectedPhotoIndex !== null) {
+                    setShowNoteModal(false);
+                    navigation.navigate("PhotoAnnotation", {
+                      itemId,
+                      photoId: item.photos[selectedPhotoIndex].id,
+                    });
+                  }
+                }}
+                disabled={isAnalyzing}
+                className={`flex-row items-center justify-center bg-orange-600 rounded-xl py-3 mb-3 ${
+                  isAnalyzing ? "opacity-50" : "active:bg-orange-700"
+                }`}
+              >
+                <Ionicons name="brush" size={20} color="#FFFFFF" />
+                <Text className="text-white text-base font-semibold ml-2">Annotate Photo</Text>
+              </Pressable>
+
+              <Text className="text-sm text-gray-600 mb-3">
+                Describe any damage, wear, or notable features visible in this photo
+              </Text>
+
+              {aiEnabled && (
+                <Pressable
+                  onPress={analyzeWithAI}
+                  disabled={isAnalyzing}
+                  className={`flex-row items-center justify-center border-2 border-blue-600 rounded-xl py-3 mb-3 ${
+                    isAnalyzing ? "opacity-50" : "active:bg-blue-50"
+                  }`}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <ActivityIndicator size="small" color="#2563EB" />
+                      <Text className="text-blue-600 text-base font-semibold ml-2">Analyzing with AI...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons name="sparkles" size={20} color="#2563EB" />
+                      <Text className="text-blue-600 text-base font-semibold ml-2">Analyze with AI</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                placeholder="e.g., Small scratch on upper left corner..."
+                placeholderTextColor="#9CA3AF"
+                value={noteText}
+                onChangeText={setNoteText}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+                style={{ minHeight: 120, maxHeight: 200 }}
+                editable={!isAnalyzing}
+              />
+            </ScrollView>
+
+            {/* Fixed Footer */}
+            <View
+              className="px-6 py-4 border-t border-gray-200 bg-white"
+              style={{ paddingBottom: insets.bottom + 16 }}
+            >
+              <Pressable
+                onPress={saveNote}
+                disabled={isAnalyzing}
+                className={`rounded-xl py-4 items-center ${
+                  isAnalyzing ? "bg-gray-300" : "bg-blue-600 active:bg-blue-700"
+                }`}
+              >
+                <Text className="text-white text-base font-semibold">Save Note</Text>
+              </Pressable>
+            </View>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
     </View>
