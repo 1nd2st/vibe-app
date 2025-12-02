@@ -250,24 +250,33 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         >
           <Pressable
             className="flex-1 bg-black/50"
-            onPress={() => setShowNoteModal(false)}
+            onPress={() => {
+              if (!isAnalyzing) {
+                setShowNoteModal(false);
+              }
+            }}
           >
             <Pressable
               onPress={(e) => e.stopPropagation()}
               className="flex-1 justify-end"
             >
-              <View className="bg-white rounded-t-3xl" style={{ maxHeight: "90%", paddingBottom: insets.bottom + 24 }}>
+              <View className="bg-white rounded-t-3xl" style={{ maxHeight: "85%", paddingBottom: insets.bottom + 16 }}>
                 <ScrollView
                   className="flex-1"
-                  contentContainerStyle={{ padding: 24 }}
+                  contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
                   keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={true}
                 >
                   <View className="flex-row items-center justify-between mb-4">
                     <Text className="text-xl font-bold text-gray-900">
                       Photo {selectedPhotoIndex !== null ? selectedPhotoIndex + 1 : ""} Note
                     </Text>
-                    <Pressable onPress={() => setShowNoteModal(false)} className="active:opacity-70">
-                      <Ionicons name="close" size={28} color="#111827" />
+                    <Pressable
+                      onPress={() => setShowNoteModal(false)}
+                      className="active:opacity-70"
+                      disabled={isAnalyzing}
+                    >
+                      <Ionicons name="close" size={28} color={isAnalyzing ? "#9CA3AF" : "#111827"} />
                     </Pressable>
                   </View>
 
@@ -295,7 +304,10 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                         });
                       }
                     }}
-                    className="flex-row items-center justify-center bg-orange-600 rounded-xl py-3 mb-3 active:bg-orange-700"
+                    disabled={isAnalyzing}
+                    className={`flex-row items-center justify-center bg-orange-600 rounded-xl py-3 mb-3 ${
+                      isAnalyzing ? "opacity-50" : "active:bg-orange-700"
+                    }`}
                   >
                     <Ionicons name="brush" size={20} color="#FFFFFF" />
                     <Text className="text-white text-base font-semibold ml-2">Annotate Photo</Text>
@@ -334,14 +346,18 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                     value={noteText}
                     onChangeText={setNoteText}
                     multiline
-                    numberOfLines={4}
+                    numberOfLines={6}
                     textAlignVertical="top"
-                    style={{ minHeight: 100 }}
+                    style={{ minHeight: 120, maxHeight: 200 }}
+                    editable={!isAnalyzing}
                   />
 
                   <Pressable
                     onPress={saveNote}
-                    className="bg-blue-600 rounded-xl py-4 items-center active:bg-blue-700"
+                    disabled={isAnalyzing}
+                    className={`rounded-xl py-4 items-center ${
+                      isAnalyzing ? "bg-gray-300" : "bg-blue-600 active:bg-blue-700"
+                    }`}
                   >
                     <Text className="text-white text-base font-semibold">Save Note</Text>
                   </Pressable>
