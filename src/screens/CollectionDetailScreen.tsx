@@ -100,7 +100,16 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="bg-white px-6 py-4 border-b border-gray-200">
         <View className="flex-row items-center mb-3">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
+          <Pressable
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate("Collections");
+              }
+            }}
+            className="mr-4 active:opacity-70"
+          >
             <Ionicons name="arrow-back" size={24} color="#111827" />
           </Pressable>
           <View className="flex-1">
