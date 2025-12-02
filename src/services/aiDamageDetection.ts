@@ -96,48 +96,70 @@ const analyzeWithClaude = async (imageUri: string, prompt: string): Promise<stri
       throw new Error("Anthropic API key not found");
     }
 
-    // Make direct API call to Anthropic
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 500,
-        messages: [
-          {
-            role: "user",
-            content: [
+    // Try newest model first, fall back to older stable version if not available
+    const models = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20240620"];
+
+    for (const model of models) {
+      try {
+        // Make direct API call to Anthropic
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: model,
+            max_tokens: 500,
+            messages: [
               {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/jpeg",
-                  data: base64Image,
-                },
-              },
-              {
-                type: "text",
-                text: prompt,
+                role: "user",
+                content: [
+                  {
+                    type: "image",
+                    source: {
+                      type: "base64",
+                      media_type: "image/jpeg",
+                      data: base64Image,
+                    },
+                  },
+                  {
+                    type: "text",
+                    text: prompt,
+                  },
+                ],
               },
             ],
-          },
-        ],
-      }),
-    });
+          }),
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Claude API error response:", errorText);
-      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.content?.[0]?.text || "";
+          return content.trim() || null;
+        }
+
+        // If not found error, try next model
+        const errorData = await response.json();
+        if (errorData.error?.type === "not_found_error") {
+          console.log(`Model ${model} not available, trying next...`);
+          continue;
+        }
+
+        // Other errors, throw
+        throw new Error(`Claude API error: ${response.status} - ${JSON.stringify(errorData)}`);
+      } catch (fetchError) {
+        // If this is the last model, throw the error
+        if (model === models[models.length - 1]) {
+          throw fetchError;
+        }
+        // Otherwise continue to next model
+        console.log(`Error with ${model}, trying next model...`);
+      }
     }
 
-    const data = await response.json();
-    const content = data.content?.[0]?.text || "";
-    return content.trim() || null;
+    throw new Error("No Claude models available");
   } catch (error) {
     console.error("Claude vision analysis error:", error);
     throw error;
