@@ -7,7 +7,7 @@ import type { Collection } from "../types/collection";
 /**
  * Generate HTML report with embedded images
  */
-export const generateCollectionHTML = async (collection: Collection): Promise<string> => {
+export const generateCollectionHTML = async (collection: Collection): Promise<{ html: string; hasMissingFiles: boolean }> => {
   const totalValue = collection.items.reduce((sum, item) => {
     const valueInUSD = item.currency === "USD" ? item.estimatedValue :
                        item.currency === "EUR" ? item.estimatedValue * 1.1 :
@@ -19,17 +19,27 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
 
   // Convert signature to base64 if exists
   let signatureBase64 = "";
+  let signatureMissing = false;
   if (collection.signature?.signatureUri) {
     try {
-      signatureBase64 = await FileSystem.readAsStringAsync(collection.signature.signatureUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      // Check if signature file exists
+      const fileInfo = await FileSystem.getInfoAsync(collection.signature.signatureUri);
+      if (fileInfo.exists) {
+        signatureBase64 = await FileSystem.readAsStringAsync(collection.signature.signatureUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      } else {
+        console.warn("Signature file not found (may have been signed before storage fix)");
+        signatureMissing = true;
+      }
     } catch (error) {
-      console.error("Error reading signature:", error);
+      console.warn("Signature unavailable (may have been signed before storage fix)");
+      signatureMissing = true;
     }
   }
 
   // Convert images to base64 for embedding
+  let totalPhotosMissing = 0;
   const itemsWithBase64Photos = await Promise.all(
     collection.items.map(async (item) => {
       const photosBase64 = await Promise.all(
@@ -37,6 +47,15 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
           try {
             // Use annotated image if available, otherwise use original
             const imageUri = photo.annotatedImageUri || photo.uri;
+
+            // Check if file exists before trying to read it
+            const fileInfo = await FileSystem.getInfoAsync(imageUri);
+            if (!fileInfo.exists) {
+              console.warn(`Photo file not found: ${imageUri}`);
+              totalPhotosMissing++;
+              return null;
+            }
+
             const base64 = await FileSystem.readAsStringAsync(imageUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
@@ -63,7 +82,8 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
               notes: photo.conditionNotes,
             };
           } catch (error) {
-            console.error("Error reading photo:", error);
+            console.warn("Photo unavailable (may have been taken before storage fix):", photo.id);
+            totalPhotosMissing++;
             return null;
           }
         })
@@ -71,6 +91,8 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
       return { ...item, photosBase64: photosBase64.filter(p => p !== null) };
     })
   );
+
+  const hasMissingFiles = signatureMissing || totalPhotosMissing > 0;
 
   const html = `
 <!DOCTYPE html>
@@ -406,7 +428,7 @@ export const generateCollectionHTML = async (collection: Collection): Promise<st
 </html>
   `;
 
-  return html;
+  return { html, hasMissingFiles };
 };
 
 export const emailCollectionReport = async (collection: Collection): Promise<void> => {
@@ -417,13 +439,34 @@ export const emailCollectionReport = async (collection: Collection): Promise<voi
       return;
     }
 
-    const reportHTML = await generateCollectionHTML(collection);
+    const { html: reportHTML, hasMissingFiles } = await generateCollectionHTML(collection);
 
-    await MailComposer.composeAsync({
-      subject: `Collection Report - ${collection.customerName} (${collection.id})`,
-      body: reportHTML,
-      isHtml: true,
-    });
+    // Show warning if some files are missing
+    if (hasMissingFiles) {
+      Alert.alert(
+        "Some Files Unavailable",
+        "Some photos or signature images could not be included in the report (they may have been captured before a recent app update). The report will be sent with the available content.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Send Anyway",
+            onPress: async () => {
+              await MailComposer.composeAsync({
+                subject: `Collection Report - ${collection.customerName} (${collection.id})`,
+                body: reportHTML,
+                isHtml: true,
+              });
+            },
+          },
+        ]
+      );
+    } else {
+      await MailComposer.composeAsync({
+        subject: `Collection Report - ${collection.customerName} (${collection.id})`,
+        body: reportHTML,
+        isHtml: true,
+      });
+    }
   } catch (error) {
     console.error("Error sending email:", error);
     Alert.alert("Error", "Failed to open email composer.");
@@ -432,7 +475,7 @@ export const emailCollectionReport = async (collection: Collection): Promise<voi
 
 export const shareCollectionReport = async (collection: Collection): Promise<void> => {
   try {
-    const reportHTML = await generateCollectionHTML(collection);
+    const { html: reportHTML } = await generateCollectionHTML(collection);
     const fileName = `collection-${collection.id}.html`;
     const fileUri = `${FileSystem.documentDirectory}${fileName}`;
 
