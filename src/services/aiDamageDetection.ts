@@ -18,16 +18,25 @@ export const analyzeImageForDamage = async (imageUri: string): Promise<string | 
 
     const prompt = settings.aiPrompt || "Analyze this artwork/item photo and identify any visible damage, wear, scratches, cracks, discoloration, or condition issues. Be specific about location and severity.";
 
-    if (settings.aiModel === "gpt-4o") {
+    // Use OpenAI by default or if GPT-4o is selected
+    if (settings.aiModel === "gpt-4o" || !settings.aiModel) {
       return await analyzeWithOpenAI(imageUri, prompt);
     } else if (settings.aiModel === "claude-3-5-sonnet") {
+      // Claude requires API key setup
+      const apiKey = process.env.EXPO_PUBLIC_VIBECODE_ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        console.warn("Claude selected but API key not available, falling back to OpenAI");
+        return await analyzeWithOpenAI(imageUri, prompt);
+      }
       return await analyzeWithClaude(imageUri, prompt);
     }
 
-    return null;
+    // Fallback to OpenAI
+    return await analyzeWithOpenAI(imageUri, prompt);
   } catch (error) {
     console.error("AI damage detection error:", error);
-    throw error;
+    // Return a user-friendly error message instead of throwing
+    return "AI analysis failed. Please try again or add notes manually.";
   }
 };
 
@@ -98,7 +107,6 @@ const analyzeWithClaude = async (imageUri: string, prompt: string): Promise<stri
       body: JSON.stringify({
         model: "claude-3-5-sonnet-20241022",
         max_tokens: 500,
-        temperature: 0.3,
         messages: [
           {
             role: "user",
@@ -122,7 +130,9 @@ const analyzeWithClaude = async (imageUri: string, prompt: string): Promise<stri
     });
 
     if (!response.ok) {
-      throw new Error(`Claude API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Claude API error response:", errorText);
+      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

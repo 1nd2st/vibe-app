@@ -91,6 +91,9 @@ This app streamlines the collection process for art logistics companies by provi
 - Real-time photo preview strip
 - Individual photo deletion
 - **AI Damage Detection**: Available in Item Detail screen and camera flow
+  - Uses GPT-4o Vision by default (highly recommended)
+  - Falls back gracefully if other models are unavailable
+  - Returns user-friendly error messages instead of crashing
 - AI-generated condition notes clearly marked and editable
 - **Full image view** - resizeMode="contain" ensures complete photo visibility
 
