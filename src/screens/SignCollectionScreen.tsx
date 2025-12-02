@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { View, Text, Pressable, TextInput, Alert, ScrollView, Image } from "react-native";
+import { View, Text, Pressable, TextInput, Alert, ScrollView, Image, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +10,7 @@ import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue, runOnJS, useDerivedValue } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
+import { emailCollectionReport } from "../utils/collectionReports";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "SignCollection">;
@@ -24,12 +25,16 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   const collection = useCollectionStore((s) =>
     s.collections.find((c) => c.id === collectionId)
   );
+  const customers = useCollectionStore((s) => s.customers);
+  const customer = customers.find((c) => c.id === collection?.customerId);
   const signCollection = useCollectionStore((s) => s.signCollection);
 
   const [paths, setPaths] = useState<string[]>([]);
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
   const [currentDrawing, setCurrentDrawing] = useState("");
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailAddress, setEmailAddress] = useState(customer?.email || "");
 
   // Calculate total value
   const totalValue = collection?.items.reduce((sum, item) => {
@@ -86,6 +91,32 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     currentPathString.value = "";
   };
 
+  const handleSendEmail = async () => {
+    if (!emailAddress.trim()) {
+      Alert.alert("Email Required", "Please enter an email address.");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailAddress.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
+    setShowEmailModal(false);
+
+    if (!collection) return;
+
+    // Update customer email if changed
+    if (customer && emailAddress.trim() !== customer.email) {
+      const updateCustomer = useCollectionStore.getState().updateCustomer;
+      updateCustomer(customer.id, { email: emailAddress.trim() });
+    }
+
+    await emailCollectionReport(collection);
+  };
+
   const handleSign = async () => {
     if (paths.length === 0) {
       Alert.alert("No Signature", "Please provide a signature before submitting.");
@@ -120,6 +151,13 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
         "Collection Signed",
         "The collection has been successfully signed and completed.",
         [
+          {
+            text: "Email Report",
+            onPress: () => {
+              setEmailAddress(customer?.email || "");
+              setShowEmailModal(true);
+            },
+          },
           {
             text: "View Collection",
             style: "cancel",
@@ -334,6 +372,113 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           <Text className="text-white text-lg font-semibold">Complete & Sign</Text>
         </Pressable>
       </View>
+
+      {/* Email Confirmation Modal */}
+      <Modal visible={showEmailModal} animationType="slide" transparent={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 bg-white"
+          style={{ paddingTop: insets.top }}
+        >
+          {/* Header */}
+          <View className="bg-white px-6 py-4 border-b border-gray-200">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <Pressable
+                  onPress={() => setShowEmailModal(false)}
+                  className="mr-4 active:opacity-70"
+                >
+                  <Ionicons name="close" size={28} color="#111827" />
+                </Pressable>
+                <Text className="text-2xl font-bold text-gray-900">Email Report</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Content */}
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ padding: 24 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View className="bg-blue-50 rounded-xl p-4 mb-6 flex-row items-start">
+              <Ionicons name="information-circle" size={24} color="#2563EB" />
+              <Text className="text-blue-900 text-sm ml-3 flex-1 leading-6">
+                Send the collection report to the customer via email. You can review and edit the email address before sending.
+              </Text>
+            </View>
+
+            {customer && (
+              <View className="bg-gray-50 rounded-xl p-4 mb-6">
+                <Text className="text-base font-semibold text-gray-900 mb-2">Customer Information</Text>
+                <Text className="text-sm text-gray-600 mb-1">
+                  <Text className="font-medium">Name:</Text> {customer.name}
+                </Text>
+                {customer.phone && (
+                  <Text className="text-sm text-gray-600">
+                    <Text className="font-medium">Phone:</Text> {customer.phone}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            <View>
+              <Text className="text-base font-semibold text-gray-900 mb-2">Email Address *</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-base text-gray-900 mb-2"
+                placeholder="Enter email address"
+                placeholderTextColor="#9CA3AF"
+                value={emailAddress}
+                onChangeText={setEmailAddress}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoFocus
+              />
+              <Text className="text-sm text-gray-500 mb-6">
+                The collection report will be sent as an HTML email with all photos and details
+              </Text>
+            </View>
+
+            <View className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <View className="flex-row items-center mb-2">
+                <Ionicons name="mail-outline" size={20} color="#D97706" />
+                <Text className="text-amber-900 font-semibold ml-2">Report Contents</Text>
+              </View>
+              <Text className="text-amber-800 text-sm leading-6">
+                • Collection summary with all items{"\n"}
+                • Photos with annotations and notes{"\n"}
+                • Item details and valuations{"\n"}
+                • Digital signature and completion date
+              </Text>
+            </View>
+          </ScrollView>
+
+          {/* Fixed Footer */}
+          <View
+            className="px-6 py-4 border-t border-gray-200 bg-white"
+            style={{ paddingBottom: insets.bottom + 16 }}
+          >
+            <Pressable
+              onPress={handleSendEmail}
+              disabled={!emailAddress.trim()}
+              className={`rounded-xl py-4 items-center mb-3 ${
+                emailAddress.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+              }`}
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="mail" size={20} color="#FFFFFF" />
+                <Text className="text-white text-lg font-semibold ml-2">Send Email Report</Text>
+              </View>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowEmailModal(false)}
+              className="rounded-xl py-3 items-center active:opacity-70"
+            >
+              <Text className="text-gray-600 text-base font-medium">Cancel</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }

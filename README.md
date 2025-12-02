@@ -4,7 +4,37 @@ A professional mobile application for art moving and logistics companies to docu
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
-### **Advanced UX Features** (NEW - Dec 2, 2025)
+### **Latest Updates** (Dec 2, 2025)
+- ✅ **Full-Screen Photo Notes Modal** - Spacious modal for detailed condition notes
+  - 300px photo preview (up from 180px)
+  - 200px text input area with 1000 character limit
+  - Character counter to track note length
+  - Better layout with proper spacing
+  - Home button in header for quick navigation
+- ✅ **Full-Screen Customer Form** - Better customer creation experience
+  - Converted from bottom sheet to full-screen modal
+  - Larger input fields with better spacing
+  - More comfortable typing experience
+  - Consistent with other modals in the app
+- ✅ **Customer CRUD Operations** - Full customer management
+  - Edit button in customer detail header (blue edit icon)
+  - Delete button with safety checks (red trash icon)
+  - Cannot delete customers with collections
+  - Full-screen edit modal with all fields editable
+  - Confirmation dialogs for destructive actions
+- ✅ **Email Report to Customer** - Send collection reports after signing
+  - "Email Report" option after completing signature
+  - Pre-filled with customer email (editable)
+  - Email validation with helpful error messages
+  - Updates customer record if email changed
+  - Beautiful confirmation modal with:
+    - Customer information display
+    - Editable email field
+    - Report contents preview
+    - Clear send/cancel actions
+  - Opens native email composer with HTML report
+
+### **Advanced UX Features** (Dec 2, 2025)
 - ✅ **Breadcrumb Navigation** - Visual navigation path on all detail screens (Home > Customer > Item)
   - Clickable breadcrumb items navigate back to previous screens
   - Always know your current location in the app
@@ -43,20 +73,24 @@ A professional mobile application for art moving and logistics companies to docu
 ### **Keyboard Management**
 - ✅ **All modals now use KeyboardAvoidingView** - Keyboards never overlay input fields
 - ✅ **Smart modal layouts** - Content scrolls properly when keyboard appears
-- ✅ **Photo note modals** - Can see photo preview while adding notes
-- ✅ **Add Customer modal** - All fields accessible with keyboard open
+- ✅ **Photo note modals** - Can see photo preview while adding notes (now full-screen with 300px preview)
+- ✅ **Add/Edit Customer modal** - All fields accessible with keyboard open (now full-screen)
 - ✅ **Item Detail modal** - AI analysis and text input work seamlessly
 - ✅ **Custom annotation modal** - Large multiline text input (120px min height, 200 char limit) for detailed descriptions
+- ✅ **Email modal** - Comfortable email editing with full context
 
 ### **Mobile-First Layout Improvements**
 - ✅ **Currency selector redesign** (AddItemScreen) - Now horizontal with proper spacing
 - ✅ **Touch targets optimized** - All buttons meet 44pt minimum for easy tapping
 - ✅ **Proper ScrollView usage** - All long-form content scrolls smoothly
 - ✅ **Safe area handling** - Content respects notches and home indicators
-- ✅ **Modal max heights** - Modals never exceed 90% screen height
+- ✅ **Modal max heights** - Modals never exceed 90% screen height (or full-screen for better UX)
 
 ### **Navigation Flow Enhancements** (UPDATED Dec 2, 2025)
-- ✅ **Post-signature actions** - Clear buttons to navigate to customer list or create new collection
+- ✅ **Post-signature actions** - Three clear options after signing:
+  - "Email Report" → Opens email confirmation modal
+  - "View Collection" → Stay on collection detail
+  - "Go to Home" → Returns to customer list
 - ✅ **Smart back navigation** - Always returns to logical parent screen
 - ✅ **Camera flow** - Returns directly to collection detail after photos
 - ✅ **Breadcrumb clarity** - Always know where you are in the app
@@ -65,35 +99,35 @@ A professional mobile application for art moving and logistics companies to docu
   - PhotoAnnotationScreen (header next to save button)
   - SignCollectionScreen (header)
   - CollectionDetailScreen (post-signature section)
-- ✅ **Post-signature navigation** - After signing, users can choose:
-  - "Go to Home" button → Returns to customer list
-  - "View Collection" button → Stay on collection detail
-  - "View Customer" button → Navigate to customer's profile
-  - "New Collection" button → Start another collection for same customer
+  - AddItemScreen, CameraScreen, NewCollectionScreen, CustomerDetailScreen, QRCodeDisplayScreen
 
 ### **Form UX Best Practices**
 - ✅ **Visible placeholders** - All inputs have helpful examples
 - ✅ **Proper keyboard types** - Phone pad for phone, email keyboard for email, etc.
 - ✅ **Auto-focus** - First field auto-focuses when modal opens
 - ✅ **Submit button placement** - Always visible at bottom of forms
-- ✅ **Multiline text areas** - Proper height for description fields (note modal: 120px, annotation modal: 120px)
+- ✅ **Multiline text areas** - Proper height for description fields (note modal: 200px min, annotation modal: 120px)
+- ✅ **Character counters** - Visual feedback for text limits (e.g., 1000 chars for photo notes)
 
 ## Overview
 
 This app streamlines the collection process for art logistics companies by providing a complete digital workflow for:
-- Managing customers and their locations (pickup/delivery addresses)
+- Managing customers and their locations (pickup/delivery addresses) with full CRUD operations
 - Creating and managing collections with auto-generated QR-compatible IDs
 - Documenting items with photos and detailed condition reports (only title required)
 - Capturing client signatures with full visual display on collection screen
+- Emailing professional HTML reports with embedded photos directly to customers
 - Exporting professional HTML reports with embedded photos (no branding)
 - Item CRUD with read-only protection after signature
 
 ## Key Features
 
-### 1. **Customer Management (NEW)**
+### 1. **Customer Management**
 - **Customer Hierarchy**: Customers → Collections → Items
 - View all customers with collection counts (active/completed)
 - Quick add customer with contact information
+- **Edit customer** - Update name, phone, email, address
+- **Delete customer** - With safety checks (cannot delete if has collections)
 - Customer detail screen shows all collections per customer
 - Search customers by name
 - Each customer has locations for pickup/delivery

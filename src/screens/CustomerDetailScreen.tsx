@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, FlatList, Pressable } from "react-native";
+import React, { useState } from "react";
+import { View, Text, FlatList, Pressable, Alert, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,8 +18,65 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
 
   const customers = useCollectionStore((s) => s.customers);
   const allCollections = useCollectionStore((s) => s.collections);
+  const updateCustomer = useCollectionStore((s) => s.updateCustomer);
+  const deleteCustomer = useCollectionStore((s) => s.deleteCustomer);
+
   const customer = customers.find((c) => c.id === customerId);
   const collections = allCollections.filter((c) => c.customerId === customerId);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [customerName, setCustomerName] = useState(customer?.name || "");
+  const [customerPhone, setCustomerPhone] = useState(customer?.phone || "");
+  const [customerEmail, setCustomerEmail] = useState(customer?.email || "");
+  const [customerAddress, setCustomerAddress] = useState(customer?.address || "");
+
+  const handleEdit = () => {
+    setCustomerName(customer?.name || "");
+    setCustomerPhone(customer?.phone || "");
+    setCustomerEmail(customer?.email || "");
+    setCustomerAddress(customer?.address || "");
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!customerName.trim()) return;
+
+    updateCustomer(customerId, {
+      name: customerName.trim(),
+      phone: customerPhone.trim(),
+      email: customerEmail.trim(),
+      address: customerAddress.trim(),
+    });
+
+    setShowEditModal(false);
+  };
+
+  const handleDelete = () => {
+    if (collections.length > 0) {
+      Alert.alert(
+        "Cannot Delete Customer",
+        `This customer has ${collections.length} collection${collections.length > 1 ? "s" : ""}. Please delete all collections first before deleting the customer.`,
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Delete Customer",
+      `Are you sure you want to delete ${customer?.name}? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            deleteCustomer(customerId);
+            navigation.navigate("Customers");
+          },
+        },
+      ]
+    );
+  };
 
   if (!customer) {
     return (
@@ -69,12 +126,26 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
               <Text className="text-sm text-gray-500">{customer.id}</Text>
             </View>
           </View>
-          <Pressable
-            onPress={() => navigation.navigate("Customers")}
-            className="ml-2 active:opacity-70"
-          >
-            <Ionicons name="home-outline" size={24} color="#2563EB" />
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={handleEdit}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="create-outline" size={24} color="#2563EB" />
+            </Pressable>
+            <Pressable
+              onPress={handleDelete}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="trash-outline" size={24} color="#DC2626" />
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate("Customers")}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="home-outline" size={24} color="#2563EB" />
+            </Pressable>
+          </View>
         </View>
 
         {/* Customer Info Card */}
@@ -183,6 +254,107 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
       >
         <Ionicons name="add" size={32} color="#FFFFFF" />
       </Pressable>
+
+      {/* Edit Customer Modal */}
+      <Modal visible={showEditModal} animationType="slide" transparent={false}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 bg-white"
+          style={{ paddingTop: insets.top }}
+        >
+          {/* Header */}
+          <View className="bg-white px-6 py-4 border-b border-gray-200">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <Pressable
+                  onPress={() => setShowEditModal(false)}
+                  className="mr-4 active:opacity-70"
+                >
+                  <Ionicons name="close" size={28} color="#111827" />
+                </Pressable>
+                <Text className="text-2xl font-bold text-gray-900">Edit Customer</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Scrollable Content */}
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ padding: 24 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View className="gap-5">
+              <View>
+                <Text className="text-base font-semibold text-gray-900 mb-2">Customer Name *</Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-base text-gray-900"
+                  placeholder="Enter customer name"
+                  placeholderTextColor="#9CA3AF"
+                  value={customerName}
+                  onChangeText={setCustomerName}
+                  autoFocus
+                />
+              </View>
+
+              <View>
+                <Text className="text-base font-semibold text-gray-900 mb-2">Phone</Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-base text-gray-900"
+                  placeholder="Enter phone number"
+                  placeholderTextColor="#9CA3AF"
+                  value={customerPhone}
+                  onChangeText={setCustomerPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View>
+                <Text className="text-base font-semibold text-gray-900 mb-2">Email</Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-base text-gray-900"
+                  placeholder="Enter email address"
+                  placeholderTextColor="#9CA3AF"
+                  value={customerEmail}
+                  onChangeText={setCustomerEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View>
+                <Text className="text-base font-semibold text-gray-900 mb-2">Address</Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-base text-gray-900"
+                  placeholder="Enter address"
+                  placeholderTextColor="#9CA3AF"
+                  value={customerAddress}
+                  onChangeText={setCustomerAddress}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  style={{ minHeight: 100 }}
+                />
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Fixed Footer */}
+          <View
+            className="px-6 py-4 border-t border-gray-200 bg-white"
+            style={{ paddingBottom: insets.bottom + 16 }}
+          >
+            <Pressable
+              onPress={handleSaveEdit}
+              disabled={!customerName.trim()}
+              className={`rounded-xl py-4 items-center ${
+                customerName.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+              }`}
+            >
+              <Text className="text-white text-lg font-semibold">Save Changes</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
