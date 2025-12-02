@@ -83,9 +83,14 @@ export default function QRCodeDisplayScreen({ navigation, route }: Props) {
             <Ionicons name="close" size={28} color="#111827" />
           </Pressable>
           <Text className="text-lg font-semibold text-gray-900">QR Codes</Text>
-          <Pressable onPress={handleShare} className="active:opacity-70">
-            <Ionicons name="share-outline" size={28} color="#2563EB" />
-          </Pressable>
+          <View className="flex-row items-center gap-3">
+            <Pressable onPress={() => navigation.navigate("Customers")} className="active:opacity-70">
+              <Ionicons name="home-outline" size={24} color="#2563EB" />
+            </Pressable>
+            <Pressable onPress={handleShare} className="active:opacity-70">
+              <Ionicons name="share-outline" size={28} color="#2563EB" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
