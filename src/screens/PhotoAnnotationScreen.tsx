@@ -146,10 +146,18 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
     }
 
     try {
-      // Capture the annotated image as a composite using ViewShot
-      const annotatedImageUri = await captureRef(viewShotRef, {
+      // Capture the annotated image as a composite using ViewShot to temp location
+      const tempAnnotatedUri = await captureRef(viewShotRef, {
         format: "png",
         quality: 1,
+      });
+
+      // Copy annotated image to permanent location
+      const permanentFileName = `annotated-${photoId}-${Date.now()}.png`;
+      const permanentAnnotatedUri = `${FileSystem.documentDirectory}${permanentFileName}`;
+      await FileSystem.copyAsync({
+        from: tempAnnotatedUri,
+        to: permanentAnnotatedUri,
       });
 
       // Save the annotation paths data so we can recreate them later
@@ -165,7 +173,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
           ? {
               ...p,
               annotationData: JSON.stringify(annotationData),
-              annotatedImageUri: annotatedImageUri, // Save the composite
+              annotatedImageUri: permanentAnnotatedUri, // Save the permanent composite URI
             }
           : p
       );

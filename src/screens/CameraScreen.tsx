@@ -10,6 +10,7 @@ import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import type { ItemPhoto } from "../types/collection";
 import { analyzeImageForDamage } from "../services/aiDamageDetection";
+import * as FileSystem from "expo-file-system";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Camera">;
@@ -82,9 +83,19 @@ export default function CameraScreen({ navigation, route }: Props) {
       }
 
       if (photo) {
+        // Copy photo to permanent location
+        const photoId = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const permanentFileName = `${photoId}.jpg`;
+        const permanentUri = `${FileSystem.documentDirectory}${permanentFileName}`;
+
+        await FileSystem.copyAsync({
+          from: photo.uri,
+          to: permanentUri,
+        });
+
         const newPhoto: ItemPhoto = {
-          id: `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          uri: photo.uri,
+          id: photoId,
+          uri: permanentUri, // Use permanent URI instead of temp URI
           timestamp: Date.now(),
           aiAnalyzed: false,
         };
@@ -99,7 +110,7 @@ export default function CameraScreen({ navigation, route }: Props) {
             if (!isMountedRef.current) return;
 
             try {
-              const aiResult = await analyzeImageForDamage(photo.uri);
+              const aiResult = await analyzeImageForDamage(permanentUri);
 
               // Check mount status again after async operation
               if (!isMountedRef.current) return;
