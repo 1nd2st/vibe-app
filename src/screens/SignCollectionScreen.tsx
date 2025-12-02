@@ -11,6 +11,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue, runOnJS, useDerivedValue } from "react-native-reanimated";
 import { captureRef } from "react-native-view-shot";
 import { emailCollectionReport } from "../utils/collectionReports";
+import * as FileSystem from "expo-file-system";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "SignCollection">;
@@ -134,14 +135,22 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     }
 
     try {
-      // Capture the signature view as an image
-      const uri = await captureRef(signatureViewRef, {
+      // Capture the signature view as an image to temp location
+      const tempUri = await captureRef(signatureViewRef, {
         format: "png",
         quality: 1,
       });
 
+      // Copy signature to permanent location
+      const permanentFileName = `signature-${collectionId}-${Date.now()}.png`;
+      const permanentUri = `${FileSystem.documentDirectory}${permanentFileName}`;
+      await FileSystem.copyAsync({
+        from: tempUri,
+        to: permanentUri,
+      });
+
       signCollection(collectionId, {
-        signatureUri: uri,
+        signatureUri: permanentUri,
         signerName: signerName.trim(),
         signerRole: signerRole.trim(),
         timestamp: Date.now(),
