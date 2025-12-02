@@ -19,7 +19,7 @@ type Props = {
 export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { itemId, photoId } = route.params;
-  const canvasRef = useRef(null);
+  const canvasRef = useRef<any>(null);
 
   const item = useCollectionStore((s) => s.getItem(itemId));
   const updateItem = useCollectionStore((s) => s.updateItem);
@@ -34,6 +34,17 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const [canvasSize, setCanvasSize] = useState({ width: Dimensions.get("window").width, height: 600 });
 
   const pathString = useSharedValue("");
+  const currentColor = useSharedValue("#FF0000");
+  const currentStrokeWidth = useSharedValue(3);
+
+  // Update shared values when state changes
+  useEffect(() => {
+    currentColor.value = drawColor;
+  }, [drawColor]);
+
+  useEffect(() => {
+    currentStrokeWidth.value = strokeWidth;
+  }, [strokeWidth]);
 
   const colors = [
     { name: "Red", value: "#FF0000" },
@@ -85,7 +96,9 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
 
   const finishPath = () => {
     if (pathString.value) {
-      setPaths((prev) => [...prev, { path: pathString.value, color: drawColor, width: strokeWidth }]);
+      const color = currentColor.value;
+      const width = currentStrokeWidth.value;
+      setPaths((prev) => [...prev, { path: pathString.value, color, width }]);
     }
     setCurrentPath("");
     pathString.value = "";
