@@ -28,7 +28,14 @@ export const analyzeImageForDamage = async (imageUri: string): Promise<string | 
         console.warn("Claude selected but API key not available, falling back to OpenAI");
         return await analyzeWithOpenAI(imageUri, prompt);
       }
-      return await analyzeWithClaude(imageUri, prompt);
+
+      // Try Claude, but fall back to OpenAI if it fails
+      try {
+        return await analyzeWithClaude(imageUri, prompt);
+      } catch (claudeError) {
+        console.warn("Claude analysis failed, falling back to OpenAI:", claudeError);
+        return await analyzeWithOpenAI(imageUri, prompt);
+      }
     }
 
     // Fallback to OpenAI
