@@ -121,8 +121,13 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
         "The collection has been successfully signed and completed.",
         [
           {
-            text: "OK",
+            text: "View Collection",
+            style: "cancel",
             onPress: () => navigation.navigate("CollectionDetail", { collectionId }),
+          },
+          {
+            text: "Go to Home",
+            onPress: () => navigation.navigate("Customers"),
           },
         ]
       );
@@ -135,14 +140,22 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       <View className="bg-white px-6 py-4 border-b border-gray-200">
-        <View className="flex-row items-center">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
-            <Ionicons name="close" size={28} color="#111827" />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">Sign Collection</Text>
-            <Text className="text-sm text-gray-500">{collection.customerName}</Text>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1">
+            <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
+              <Ionicons name="close" size={28} color="#111827" />
+            </Pressable>
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-gray-900">Sign Collection</Text>
+              <Text className="text-sm text-gray-500">{collection.customerName}</Text>
+            </View>
           </View>
+          <Pressable
+            onPress={() => navigation.navigate("Customers")}
+            className="ml-2 active:opacity-70"
+          >
+            <Ionicons name="home-outline" size={24} color="#2563EB" />
+          </Pressable>
         </View>
       </View>
 

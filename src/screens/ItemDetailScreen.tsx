@@ -94,14 +94,22 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="bg-white px-6 py-4 border-b border-gray-200">
-        <View className="flex-row items-center">
-          <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
-            <Ionicons name="arrow-back" size={24} color="#111827" />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900">{item.title}</Text>
-            <Text className="text-sm text-gray-500">{item.id}</Text>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1">
+            <Pressable onPress={() => navigation.goBack()} className="mr-4 active:opacity-70">
+              <Ionicons name="arrow-back" size={24} color="#111827" />
+            </Pressable>
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-gray-900">{item.title}</Text>
+              <Text className="text-sm text-gray-500">{item.id}</Text>
+            </View>
           </View>
+          <Pressable
+            onPress={() => navigation.navigate("Customers")}
+            className="ml-2 active:opacity-70"
+          >
+            <Ionicons name="home-outline" size={24} color="#2563EB" />
+          </Pressable>
         </View>
       </View>
 

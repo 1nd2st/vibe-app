@@ -343,6 +343,16 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                 {/* Post-Signature Actions */}
                 <View className="mt-4 space-y-2">
                   <Pressable
+                    onPress={() => navigation.navigate("Customers")}
+                    className="bg-blue-600 rounded-xl py-3 items-center active:bg-blue-700 mb-2"
+                  >
+                    <View className="flex-row items-center">
+                      <Ionicons name="home" size={20} color="#FFFFFF" />
+                      <Text className="text-white text-base font-semibold ml-2">Go to Home</Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
                     onPress={() => {
                       if (customer) {
                         navigation.navigate("CustomerDetail", { customerId: customer.id });

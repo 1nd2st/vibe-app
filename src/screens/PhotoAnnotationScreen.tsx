@@ -193,9 +193,17 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
             <Ionicons name="close" size={28} color="#FFFFFF" />
           </Pressable>
           <Text className="text-white text-lg font-semibold">Annotate Photo</Text>
-          <Pressable onPress={handleSave} className="active:opacity-70">
-            <Ionicons name="checkmark" size={32} color="#10B981" />
-          </Pressable>
+          <View className="flex-row items-center">
+            <Pressable
+              onPress={() => navigation.navigate("Customers")}
+              className="mr-4 active:opacity-70"
+            >
+              <Ionicons name="home-outline" size={24} color="#FFFFFF" />
+            </Pressable>
+            <Pressable onPress={handleSave} className="active:opacity-70">
+              <Ionicons name="checkmark" size={32} color="#10B981" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -322,23 +330,31 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
       {/* Custom Text Modal */}
       <Modal visible={showCustomTextModal} transparent animationType="fade">
         <Pressable
-          className="flex-1 bg-black/70 justify-center items-center"
+          className="flex-1 bg-black/70 justify-center items-center px-6"
           onPress={handleCancelCustomText}
         >
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <View className="bg-white rounded-3xl p-6 mx-6 w-80">
-              <Text className="text-xl font-bold text-gray-900 mb-4">Custom Annotation</Text>
-              <Text className="text-sm text-gray-600 mb-3">
-                Enter a description for this annotation:
+          <Pressable onPress={(e) => e.stopPropagation()} className="w-full max-w-md">
+            <View className="bg-white rounded-3xl p-6">
+              <Text className="text-xl font-bold text-gray-900 mb-2">Custom Annotation</Text>
+              <Text className="text-sm text-gray-600 mb-4">
+                Describe the issue or condition you want to note:
               </Text>
               <TextInput
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
-                placeholder="e.g., Water damage, Dent, etc."
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-base text-gray-900 mb-4"
+                placeholder="E.g., Water damage on bottom left corner, visible rust on metal frame..."
                 placeholderTextColor="#9CA3AF"
                 value={customText}
                 onChangeText={setCustomText}
                 autoFocus
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                style={{ minHeight: 120 }}
+                maxLength={200}
               />
+              <Text className="text-xs text-gray-400 mb-4 text-right">
+                {customText.length}/200 characters
+              </Text>
               <View className="flex-row gap-3">
                 <Pressable
                   onPress={handleCancelCustomText}
@@ -353,7 +369,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
                     customText.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
                   }`}
                 >
-                  <Text className="text-white text-base font-semibold">Save</Text>
+                  <Text className="text-white text-base font-semibold">Save Note</Text>
                 </Pressable>
               </View>
             </View>

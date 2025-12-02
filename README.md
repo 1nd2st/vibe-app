@@ -10,6 +10,7 @@ A professional mobile application for art moving and logistics companies to docu
 - ✅ **Photo note modals** - Can see photo preview while adding notes
 - ✅ **Add Customer modal** - All fields accessible with keyboard open
 - ✅ **Item Detail modal** - AI analysis and text input work seamlessly
+- ✅ **Custom annotation modal** - Large multiline text input (120px min height, 200 char limit) for detailed descriptions
 
 ### **Mobile-First Layout Improvements**
 - ✅ **Currency selector redesign** (AddItemScreen) - Now horizontal with proper spacing
@@ -18,18 +19,28 @@ A professional mobile application for art moving and logistics companies to docu
 - ✅ **Safe area handling** - Content respects notches and home indicators
 - ✅ **Modal max heights** - Modals never exceed 90% screen height
 
-### **Navigation Flow Enhancements**
+### **Navigation Flow Enhancements** (UPDATED Dec 2, 2025)
 - ✅ **Post-signature actions** - Clear buttons to navigate to customer list or create new collection
 - ✅ **Smart back navigation** - Always returns to logical parent screen
 - ✅ **Camera flow** - Returns directly to collection detail after photos
 - ✅ **Breadcrumb clarity** - Always know where you are in the app
+- ✅ **Home button everywhere** - Quick access to customer list (Home) from all key screens:
+  - ItemDetailScreen (top right corner)
+  - PhotoAnnotationScreen (header next to save button)
+  - SignCollectionScreen (header)
+  - CollectionDetailScreen (post-signature section)
+- ✅ **Post-signature navigation** - After signing, users can choose:
+  - "Go to Home" button → Returns to customer list
+  - "View Collection" button → Stay on collection detail
+  - "View Customer" button → Navigate to customer's profile
+  - "New Collection" button → Start another collection for same customer
 
 ### **Form UX Best Practices**
 - ✅ **Visible placeholders** - All inputs have helpful examples
 - ✅ **Proper keyboard types** - Phone pad for phone, email keyboard for email, etc.
 - ✅ **Auto-focus** - First field auto-focuses when modal opens
 - ✅ **Submit button placement** - Always visible at bottom of forms
-- ✅ **Multiline text areas** - Proper height for description fields
+- ✅ **Multiline text areas** - Proper height for description fields (note modal: 120px, annotation modal: 120px)
 
 ## Overview
 
