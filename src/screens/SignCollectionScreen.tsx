@@ -6,10 +6,10 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
-import { Canvas, Path, Skia, makeImageFromView } from "@shopify/react-native-skia";
+import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue, runOnJS } from "react-native-reanimated";
-import * as FileSystem from "expo-file-system";
+import { captureRef } from "react-native-view-shot";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "SignCollection">;
@@ -19,7 +19,7 @@ type Props = {
 export default function SignCollectionScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { collectionId } = route.params;
-  const canvasRef = useRef<any>(null);
+  const signatureViewRef = useRef<View>(null);
 
   const collection = useCollectionStore((s) =>
     s.collections.find((c) => c.id === collectionId)
@@ -107,22 +107,14 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     }
 
     try {
-      // Capture the Skia canvas as an image
-      const snapshot = await makeImageFromView(canvasRef);
-      if (!snapshot) {
-        throw new Error("Failed to capture signature");
-      }
-      const base64 = snapshot.encodeToBase64();
-
-      // Save to file system
-      const fileName = `signature_${Date.now()}.png`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
+      // Capture the signature view as an image
+      const uri = await captureRef(signatureViewRef, {
+        format: "png",
+        quality: 1,
       });
 
       signCollection(collectionId, {
-        signatureUri: fileUri,
+        signatureUri: uri,
         signerName: signerName.trim(),
         signerRole: signerRole.trim(),
         timestamp: Date.now(),
@@ -296,11 +288,12 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           </Text>
 
           <View
+            ref={signatureViewRef}
             className="border-2 border-dashed border-gray-300 rounded-xl bg-white overflow-hidden"
             style={{ height: 200 }}
           >
             <GestureDetector gesture={pan}>
-              <Canvas ref={canvasRef} style={{ flex: 1 }}>
+              <Canvas style={{ flex: 1 }}>
                 {paths.map((pathString, index) => {
                   const path = Skia.Path.MakeFromSVGString(pathString);
                   return path ? (
