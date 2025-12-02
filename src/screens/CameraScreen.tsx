@@ -190,7 +190,7 @@ export default function CameraScreen({ navigation, route }: Props) {
         <View className="absolute top-0 left-0 right-0 bottom-0 z-10">
           {/* Top Bar */}
           <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 24 }}>
-            <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center justify-between mb-3">
               <Pressable
                 onPress={() => navigation.goBack()}
                 className="w-10 h-10 rounded-full bg-black/50 items-center justify-center active:bg-black/70"
@@ -215,6 +215,13 @@ export default function CameraScreen({ navigation, route }: Props) {
                   <Ionicons name="camera-reverse" size={20} color="#FFFFFF" />
                 </Pressable>
               </View>
+
+              <Pressable
+                onPress={() => navigation.navigate("Customers")}
+                className="w-10 h-10 rounded-full bg-black/50 items-center justify-center active:bg-black/70"
+              >
+                <Ionicons name="home-outline" size={24} color="#FFFFFF" />
+              </Pressable>
             </View>
 
             {item && (
