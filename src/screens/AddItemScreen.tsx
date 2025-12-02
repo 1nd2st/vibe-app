@@ -228,47 +228,45 @@ export default function AddItemScreen({ navigation, route }: Props) {
         <View className="bg-white rounded-2xl p-4 mb-4">
           <Text className="text-lg font-semibold text-gray-900 mb-4">Value & Condition</Text>
 
-          <View className="flex-row items-end space-x-3 mb-4">
-            <View className="flex-1">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Estimated Value</Text>
-              <TextInput
-                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                placeholder="0.00"
-                placeholderTextColor="#9CA3AF"
-                value={estimatedValue}
-                onChangeText={setEstimatedValue}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View className="bg-gray-100 rounded-lg p-1 mb-3">
-              <Pressable
-                onPress={() => setCurrency("USD")}
-                className={`px-3 py-1.5 rounded ${currency === "USD" ? "bg-white" : ""}`}
-              >
-                <Text className={`text-sm font-medium ${currency === "USD" ? "text-blue-600" : "text-gray-600"}`}>
-                  USD
-                </Text>
-              </Pressable>
-            </View>
-            <View className="bg-gray-100 rounded-lg p-1 mb-3">
-              <Pressable
-                onPress={() => setCurrency("EUR")}
-                className={`px-3 py-1.5 rounded ${currency === "EUR" ? "bg-white" : ""}`}
-              >
-                <Text className={`text-sm font-medium ${currency === "EUR" ? "text-blue-600" : "text-gray-600"}`}>
-                  EUR
-                </Text>
-              </Pressable>
-            </View>
-            <View className="bg-gray-100 rounded-lg p-1 mb-3">
-              <Pressable
-                onPress={() => setCurrency("GBP")}
-                className={`px-3 py-1.5 rounded ${currency === "GBP" ? "bg-white" : ""}`}
-              >
-                <Text className={`text-sm font-medium ${currency === "GBP" ? "text-blue-600" : "text-gray-600"}`}>
-                  GBP
-                </Text>
-              </Pressable>
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Estimated Value</Text>
+            <View className="flex-row items-center gap-2">
+              <View className="flex-1">
+                <TextInput
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                  placeholder="0.00"
+                  placeholderTextColor="#9CA3AF"
+                  value={estimatedValue}
+                  onChangeText={setEstimatedValue}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View className="flex-row bg-gray-100 rounded-lg p-1">
+                <Pressable
+                  onPress={() => setCurrency("USD")}
+                  className={`px-3 py-2 rounded ${currency === "USD" ? "bg-white" : ""}`}
+                >
+                  <Text className={`text-sm font-medium ${currency === "USD" ? "text-blue-600" : "text-gray-600"}`}>
+                    USD
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setCurrency("EUR")}
+                  className={`px-3 py-2 rounded ${currency === "EUR" ? "bg-white" : ""}`}
+                >
+                  <Text className={`text-sm font-medium ${currency === "EUR" ? "text-blue-600" : "text-gray-600"}`}>
+                    EUR
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setCurrency("GBP")}
+                  className={`px-3 py-2 rounded ${currency === "GBP" ? "bg-white" : ""}`}
+                >
+                  <Text className={`text-sm font-medium ${currency === "GBP" ? "text-blue-600" : "text-gray-600"}`}>
+                    GBP
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
 

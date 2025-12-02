@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, FlatList, Pressable, TextInput, Modal } from "react-native";
+import { View, Text, FlatList, Pressable, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -170,78 +170,98 @@ export default function CustomersScreen({ navigation }: Props) {
 
       {/* Add Customer Modal */}
       <Modal visible={showAddModal} animationType="slide" transparent>
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6" style={{ paddingBottom: insets.bottom + 24 }}>
-            <View className="flex-row items-center justify-between mb-6">
-              <Text className="text-2xl font-bold text-gray-900">New Customer</Text>
-              <Pressable onPress={() => setShowAddModal(false)} className="active:opacity-70">
-                <Ionicons name="close" size={28} color="#111827" />
-              </Pressable>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => setShowAddModal(false)}
+          />
+          <View style={{ flex: 1, justifyContent: "flex-end" }}>
+            <View className="bg-white rounded-t-3xl p-6" style={{ maxHeight: "85%", paddingBottom: insets.bottom + 24 }}>
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-2xl font-bold text-gray-900">New Customer</Text>
+                <Pressable onPress={() => setShowAddModal(false)} className="active:opacity-70">
+                  <Ionicons name="close" size={28} color="#111827" />
+                </Pressable>
+              </View>
+
+              <ScrollView
+                contentContainerStyle={{ paddingBottom: 16 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View className="gap-4">
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Customer Name *</Text>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                      placeholder="Enter customer name"
+                      placeholderTextColor="#9CA3AF"
+                      value={customerName}
+                      onChangeText={setCustomerName}
+                      autoFocus
+                    />
+                  </View>
+
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Phone</Text>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                      placeholder="Enter phone number"
+                      placeholderTextColor="#9CA3AF"
+                      value={customerPhone}
+                      onChangeText={setCustomerPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                      placeholder="Enter email address"
+                      placeholderTextColor="#9CA3AF"
+                      value={customerEmail}
+                      onChangeText={setCustomerEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Address</Text>
+                    <TextInput
+                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                      placeholder="Enter address"
+                      placeholderTextColor="#9CA3AF"
+                      value={customerAddress}
+                      onChangeText={setCustomerAddress}
+                      multiline
+                      numberOfLines={2}
+                      textAlignVertical="top"
+                      style={{ minHeight: 80 }}
+                    />
+                  </View>
+                </View>
+              </ScrollView>
+
+              <View className="mt-6">
+                <Pressable
+                  onPress={handleAddCustomer}
+                  disabled={!customerName.trim()}
+                  className={`rounded-xl py-4 items-center ${
+                    customerName.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+                  }`}
+                >
+                  <Text className="text-white text-base font-semibold">Add Customer</Text>
+                </Pressable>
+              </View>
             </View>
-
-            <View className="gap-4">
-              <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Customer Name *</Text>
-                <TextInput
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                  placeholder="Enter customer name"
-                  placeholderTextColor="#9CA3AF"
-                  value={customerName}
-                  onChangeText={setCustomerName}
-                  autoFocus
-                />
-              </View>
-
-              <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Phone</Text>
-                <TextInput
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                  placeholder="Enter phone number"
-                  placeholderTextColor="#9CA3AF"
-                  value={customerPhone}
-                  onChangeText={setCustomerPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
-                <TextInput
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                  placeholder="Enter email address"
-                  placeholderTextColor="#9CA3AF"
-                  value={customerEmail}
-                  onChangeText={setCustomerEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Address</Text>
-                <TextInput
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
-                  placeholder="Enter address"
-                  placeholderTextColor="#9CA3AF"
-                  value={customerAddress}
-                  onChangeText={setCustomerAddress}
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
-            </View>
-
-            <Pressable
-              onPress={handleAddCustomer}
-              disabled={!customerName.trim()}
-              className={`rounded-xl py-4 items-center mt-6 ${
-                customerName.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
-              }`}
-            >
-              <Text className="text-white text-base font-semibold">Add Customer</Text>
-            </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

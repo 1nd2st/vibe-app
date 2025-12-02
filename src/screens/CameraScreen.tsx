@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Pressable, TextInput, Modal, FlatList, Image } from "react-native";
+import { View, Text, Pressable, TextInput, Modal, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import { useCollectionStore } from "../state/collectionStore";
 import { useSettingsStore } from "../state/settingsStore";
@@ -298,39 +298,67 @@ export default function CameraScreen({ navigation, route }: Props) {
 
       {/* Note Modal */}
       <Modal visible={showNoteModal} animationType="slide" transparent>
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl p-6" style={{ paddingBottom: insets.bottom + 24 }}>
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-xl font-bold text-gray-900">Add Condition Note</Text>
-              <Pressable onPress={() => setShowNoteModal(false)} className="active:opacity-70">
-                <Ionicons name="close" size={28} color="#111827" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => setShowNoteModal(false)}
+          />
+          <View style={{ flex: 1, justifyContent: "flex-end" }}>
+            <View className="bg-white rounded-t-3xl p-6" style={{ maxHeight: "70%", paddingBottom: insets.bottom + 24 }}>
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-xl font-bold text-gray-900">Add Condition Note</Text>
+                <Pressable onPress={() => setShowNoteModal(false)} className="active:opacity-70">
+                  <Ionicons name="close" size={28} color="#111827" />
+                </Pressable>
+              </View>
+
+              {currentPhotoIndex !== null && photos[currentPhotoIndex] && (
+                <View className="mb-4">
+                  <Image
+                    source={{ uri: photos[currentPhotoIndex].uri }}
+                    style={{ width: "100%", height: 150 }}
+                    className="rounded-xl"
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
+
+              <Text className="text-sm text-gray-600 mb-3">
+                Describe any damage, wear, or notable features visible in this photo
+              </Text>
+
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 8 }}
+              >
+                <TextInput
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                  placeholder="e.g., Small scratch on upper left corner..."
+                  placeholderTextColor="#9CA3AF"
+                  value={noteText}
+                  onChangeText={setNoteText}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  style={{ minHeight: 100 }}
+                  autoFocus
+                />
+              </ScrollView>
+
+              <Pressable
+                onPress={saveNote}
+                className="bg-blue-600 rounded-xl py-4 items-center active:bg-blue-700"
+              >
+                <Text className="text-white text-base font-semibold">Save Note</Text>
               </Pressable>
             </View>
-
-            <Text className="text-sm text-gray-600 mb-3">
-              Describe any damage, wear, or notable features visible in this photo
-            </Text>
-
-            <TextInput
-              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
-              placeholder="e.g., Small scratch on upper left corner..."
-              placeholderTextColor="#9CA3AF"
-              value={noteText}
-              onChangeText={setNoteText}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              autoFocus
-            />
-
-            <Pressable
-              onPress={saveNote}
-              className="bg-blue-600 rounded-xl py-4 items-center active:bg-blue-700"
-            >
-              <Text className="text-white text-base font-semibold">Save Note</Text>
-            </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

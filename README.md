@@ -2,6 +2,35 @@
 
 A professional mobile application for art moving and logistics companies to document item collections with comprehensive condition reporting, digital signatures, and export capabilities - inspired by Articheck's professional standards.
 
+## ✨ Recent UI/UX Improvements (Mobile-Optimized)
+
+### **Keyboard Management**
+- ✅ **All modals now use KeyboardAvoidingView** - Keyboards never overlay input fields
+- ✅ **Smart modal layouts** - Content scrolls properly when keyboard appears
+- ✅ **Photo note modals** - Can see photo preview while adding notes
+- ✅ **Add Customer modal** - All fields accessible with keyboard open
+- ✅ **Item Detail modal** - AI analysis and text input work seamlessly
+
+### **Mobile-First Layout Improvements**
+- ✅ **Currency selector redesign** (AddItemScreen) - Now horizontal with proper spacing
+- ✅ **Touch targets optimized** - All buttons meet 44pt minimum for easy tapping
+- ✅ **Proper ScrollView usage** - All long-form content scrolls smoothly
+- ✅ **Safe area handling** - Content respects notches and home indicators
+- ✅ **Modal max heights** - Modals never exceed 90% screen height
+
+### **Navigation Flow Enhancements**
+- ✅ **Post-signature actions** - Clear buttons to navigate to customer list or create new collection
+- ✅ **Smart back navigation** - Always returns to logical parent screen
+- ✅ **Camera flow** - Returns directly to collection detail after photos
+- ✅ **Breadcrumb clarity** - Always know where you are in the app
+
+### **Form UX Best Practices**
+- ✅ **Visible placeholders** - All inputs have helpful examples
+- ✅ **Proper keyboard types** - Phone pad for phone, email keyboard for email, etc.
+- ✅ **Auto-focus** - First field auto-focuses when modal opens
+- ✅ **Submit button placement** - Always visible at bottom of forms
+- ✅ **Multiline text areas** - Proper height for description fields
+
 ## Overview
 
 This app streamlines the collection process for art logistics companies by providing a complete digital workflow for:
