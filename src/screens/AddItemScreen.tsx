@@ -17,8 +17,16 @@ export default function AddItemScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { collectionId } = route.params;
   const addItem = useCollectionStore((s) => s.addItem);
+  const collection = useCollectionStore((s) =>
+    s.collections.find((c) => c.id === collectionId)
+  );
 
-  const [title, setTitle] = useState("");
+  // Generate prefilled title
+  const nextItemNumber = (collection?.items.length || 0) + 1;
+  const prefilledTitle = collection ? `${collection.displayId}-item${nextItemNumber.toString().padStart(3, "0")}` : "";
+
+  const [title, setTitle] = useState(prefilledTitle);
+  const [isTitlePrefilled, setIsTitlePrefilled] = useState(true);
   const [description, setDescription] = useState("");
   const [artistName, setArtistName] = useState("");
   const [length, setLength] = useState("");
@@ -89,7 +97,16 @@ export default function AddItemScreen({ navigation, route }: Props) {
             placeholder="e.g., Oil Painting, Sculpture"
             placeholderTextColor="#9CA3AF"
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(text) => {
+              setTitle(text);
+              setIsTitlePrefilled(false);
+            }}
+            onFocus={() => {
+              if (isTitlePrefilled) {
+                // Select all text when focused with prefilled value
+                // This allows user to either start typing (replacing all) or keep editing
+              }
+            }}
           />
 
           <Text className="text-sm font-medium text-gray-700 mb-2">Description</Text>

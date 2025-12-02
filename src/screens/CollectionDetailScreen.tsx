@@ -80,19 +80,36 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   };
 
   // Calculate progress
-  const getProgress = () => {
-    if (collection.status === "signed") return 100;
-    if (collection.status === "completed") return 75;
-    if (collection.items.length > 0) return 50;
-    return 25;
+  const getCurrentStep = () => {
+    if (collection.status === "signed") return 4;
+    if (collection.status === "completed") return 3;
+    if (collection.items.length > 0) return 2;
+    return 1;
   };
 
-  const getProgressColor = () => {
-    const progress = getProgress();
-    if (progress === 100) return "#16A34A";
-    if (progress >= 75) return "#2563EB";
-    if (progress >= 50) return "#F59E0B";
-    return "#6B7280";
+  const steps = [
+    { number: 1, label: "Create", completed: true },
+    { number: 2, label: "Add Items", completed: collection.items.length > 0 },
+    { number: 3, label: "Complete", completed: collection.status === "completed" || collection.status === "signed" },
+    { number: 4, label: "Sign", completed: collection.status === "signed" },
+  ];
+
+  const currentStep = getCurrentStep();
+
+  const handleStepClick = (stepNumber: number) => {
+    if (collection.status === "signed") return; // Can't navigate if signed
+
+    // Only allow going back to previous steps
+    if (stepNumber >= currentStep) return;
+
+    if (stepNumber === 2 && collection.items.length > 0) {
+      // Go to first item or show items list (already on this screen)
+      return;
+    }
+    if (stepNumber === 1) {
+      // Already created, can't go back
+      return;
+    }
   };
 
   return (
@@ -140,19 +157,53 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {/* Progress Bar */}
+        {/* Multistep Progress Bar */}
         <View className="mb-3">
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-xs font-medium text-gray-600">Collection Progress</Text>
-            <Text className="text-xs font-semibold" style={{ color: getProgressColor() }}>
-              {getProgress()}%
-            </Text>
-          </View>
-          <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <View
-              className="h-full rounded-full"
-              style={{ width: `${getProgress()}%`, backgroundColor: getProgressColor() }}
-            />
+            {steps.map((step, index) => (
+              <React.Fragment key={step.number}>
+                {/* Step Circle */}
+                <Pressable
+                  onPress={() => handleStepClick(step.number)}
+                  disabled={step.number >= currentStep || collection.status === "signed"}
+                  className="items-center flex-1"
+                >
+                  <View
+                    className={`w-10 h-10 rounded-full items-center justify-center mb-1 ${
+                      step.completed
+                        ? "bg-green-600"
+                        : step.number === currentStep
+                        ? "bg-blue-600"
+                        : "bg-gray-300"
+                    }`}
+                  >
+                    {step.completed ? (
+                      <Ionicons name="checkmark" size={24} color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-white font-bold">{step.number}</Text>
+                    )}
+                  </View>
+                  <Text
+                    className={`text-xs font-medium ${
+                      step.completed || step.number === currentStep
+                        ? "text-gray-900"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {step.label}
+                  </Text>
+                </Pressable>
+
+                {/* Connector Line */}
+                {index < steps.length - 1 && (
+                  <View className="flex-1 h-0.5 bg-gray-300 mx-1 -mt-6">
+                    <View
+                      className={`h-full ${step.completed ? "bg-green-600" : "bg-gray-300"}`}
+                    />
+                  </View>
+                )}
+              </React.Fragment>
+            ))}
           </View>
         </View>
 

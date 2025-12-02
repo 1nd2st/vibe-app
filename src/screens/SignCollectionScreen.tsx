@@ -27,7 +27,6 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   const signCollection = useCollectionStore((s) => s.signCollection);
 
   const [paths, setPaths] = useState<string[]>([]);
-  const [currentPath, setCurrentPath] = useState("");
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
 
@@ -40,37 +39,22 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   }, 0) || 0;
 
   // Use shared values for gesture handling
-  const pathString = useSharedValue("");
-
-  const startPath = (x: number, y: number) => {
-    setCurrentPath(`M ${x} ${y}`);
-    pathString.value = `M ${x} ${y}`;
-  };
-
-  const addToPath = (x: number, y: number) => {
-    const newPath = pathString.value + ` L ${x} ${y}`;
-    pathString.value = newPath;
-    setCurrentPath(newPath);
-  };
-
-  const finishPath = () => {
-    if (pathString.value) {
-      setPaths((prev) => [...prev, pathString.value]);
-    }
-    setCurrentPath("");
-    pathString.value = "";
-  };
+  const currentPathString = useSharedValue("");
 
   const pan = Gesture.Pan()
-    .onBegin((e) => {
-      runOnJS(startPath)(e.x, e.y);
+    .onStart((e) => {
+      currentPathString.value = `M ${e.x} ${e.y}`;
     })
     .onUpdate((e) => {
-      runOnJS(addToPath)(e.x, e.y);
+      currentPathString.value = currentPathString.value + ` L ${e.x} ${e.y}`;
     })
     .onEnd(() => {
-      runOnJS(finishPath)();
-    });
+      if (currentPathString.value) {
+        runOnJS(setPaths)([...paths, currentPathString.value]);
+        currentPathString.value = "";
+      }
+    })
+    .runOnJS(true);
 
   if (!collection) {
     return (
@@ -86,12 +70,11 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
 
   const clearSignature = () => {
     setPaths([]);
-    setCurrentPath("");
-    pathString.value = "";
+    currentPathString.value = "";
   };
 
   const handleSign = async () => {
-    if (paths.length === 0 && !currentPath) {
+    if (paths.length === 0) {
       Alert.alert("No Signature", "Please provide a signature before submitting.");
       return;
     }
@@ -294,18 +277,12 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           >
             <GestureDetector gesture={pan}>
               <Canvas style={{ flex: 1 }}>
-                {paths.map((pathString, index) => {
-                  const path = Skia.Path.MakeFromSVGString(pathString);
+                {paths.map((pathStr, index) => {
+                  const path = Skia.Path.MakeFromSVGString(pathStr);
                   return path ? (
                     <Path key={index} path={path} color="#000000" style="stroke" strokeWidth={3} />
                   ) : null;
                 })}
-                {currentPath && (() => {
-                  const path = Skia.Path.MakeFromSVGString(currentPath);
-                  return path ? (
-                    <Path path={path} color="#000000" style="stroke" strokeWidth={3} />
-                  ) : null;
-                })()}
               </Canvas>
             </GestureDetector>
           </View>
@@ -315,9 +292,9 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
       <View className="bg-white border-t border-gray-200 px-6 py-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <Pressable
           onPress={handleSign}
-          disabled={(paths.length === 0 && !currentPath) || !signerName.trim() || !signerRole.trim()}
+          disabled={paths.length === 0 || !signerName.trim() || !signerRole.trim()}
           className={`rounded-xl py-4 items-center ${
-            (paths.length > 0 || currentPath) && signerName.trim() && signerRole.trim()
+            paths.length > 0 && signerName.trim() && signerRole.trim()
               ? "bg-green-600 active:bg-green-700"
               : "bg-gray-300"
           }`}

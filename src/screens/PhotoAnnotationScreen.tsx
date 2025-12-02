@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, Pressable, Alert, Dimensions } from "react-native";
+import { View, Text, Pressable, Alert, Dimensions, TextInput, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -27,32 +27,21 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const photo = item?.photos.find((p) => p.id === photoId);
   const image = useImage(photo?.uri || "");
 
-  const [paths, setPaths] = useState<Array<{ path: string; color: string; width: number }>>([]);
-  const [currentPath, setCurrentPath] = useState("");
+  const [paths, setPaths] = useState<Array<{ path: string; color: string; width: number; label?: string }>>([]);
   const [drawColor, setDrawColor] = useState("#FF0000");
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [canvasSize, setCanvasSize] = useState({ width: Dimensions.get("window").width, height: 600 });
+  const [showCustomTextModal, setShowCustomTextModal] = useState(false);
+  const [customText, setCustomText] = useState("");
+  const [pendingPath, setPendingPath] = useState<{ path: string; color: string; width: number } | null>(null);
 
-  const pathString = useSharedValue("");
-  const currentColor = useSharedValue("#FF0000");
-  const currentStrokeWidth = useSharedValue(3);
+  const currentPathString = useSharedValue("");
 
-  // Update shared values when state changes
-  useEffect(() => {
-    currentColor.value = drawColor;
-  }, [drawColor]);
-
-  useEffect(() => {
-    currentStrokeWidth.value = strokeWidth;
-  }, [strokeWidth]);
-
-  const colors = [
-    { name: "Red", value: "#FF0000" },
-    { name: "Yellow", value: "#FFFF00" },
-    { name: "Green", value: "#00FF00" },
-    { name: "Blue", value: "#0000FF" },
-    { name: "White", value: "#FFFFFF" },
-    { name: "Black", value: "#000000" },
+  const annotationTypes = [
+    { name: "Damage", value: "#FF0000", label: "Damage" },
+    { name: "Scratch", value: "#FFA500", label: "Scratch" },
+    { name: "Missing Part", value: "#00FF00", label: "Missing" },
+    { name: "Custom", value: "#0000FF", label: "Custom" },
   ];
 
   const strokeWidths = [2, 3, 5, 8];
@@ -83,42 +72,49 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
     );
   }
 
-  const startPath = (x: number, y: number) => {
-    setCurrentPath(`M ${x} ${y}`);
-    pathString.value = `M ${x} ${y}`;
-  };
-
-  const addToPath = (x: number, y: number) => {
-    const newPath = pathString.value + ` L ${x} ${y}`;
-    pathString.value = newPath;
-    setCurrentPath(newPath);
-  };
-
-  const finishPath = () => {
-    if (pathString.value) {
-      const color = currentColor.value;
-      const width = currentStrokeWidth.value;
-      setPaths((prev) => [...prev, { path: pathString.value, color, width }]);
-    }
-    setCurrentPath("");
-    pathString.value = "";
-  };
-
   const pan = Gesture.Pan()
-    .onBegin((e) => {
-      runOnJS(startPath)(e.x, e.y);
+    .onStart((e) => {
+      currentPathString.value = `M ${e.x} ${e.y}`;
     })
     .onUpdate((e) => {
-      runOnJS(addToPath)(e.x, e.y);
+      currentPathString.value = currentPathString.value + ` L ${e.x} ${e.y}`;
     })
     .onEnd(() => {
-      runOnJS(finishPath)();
-    });
+      if (currentPathString.value) {
+        const newPath = { path: currentPathString.value, color: drawColor, width: strokeWidth };
+
+        // If custom (blue) color is selected, show modal for text input
+        if (drawColor === "#0000FF") {
+          setPendingPath(newPath);
+          setShowCustomTextModal(true);
+        } else {
+          // Add label based on color for non-custom annotations
+          const label = annotationTypes.find(t => t.value === drawColor)?.label;
+          runOnJS(setPaths)([...paths, { ...newPath, label }]);
+        }
+        currentPathString.value = "";
+      }
+    })
+    .runOnJS(true);
+
+  const handleSaveCustomText = () => {
+    if (pendingPath && customText.trim()) {
+      setPaths([...paths, { ...pendingPath, label: customText.trim() }]);
+      setCustomText("");
+      setPendingPath(null);
+      setShowCustomTextModal(false);
+    }
+  };
+
+  const handleCancelCustomText = () => {
+    setCustomText("");
+    setPendingPath(null);
+    setShowCustomTextModal(false);
+  };
 
   const clearAll = () => {
     setPaths([]);
-    setCurrentPath("");
-    pathString.value = "";
+    currentPathString.value = "";
   };
 
   const undoLast = () => {
@@ -128,7 +124,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   };
 
   const handleSave = async () => {
-    if (paths.length === 0 && !currentPath) {
+    if (paths.length === 0) {
       Alert.alert("No Annotations", "Please draw on the photo before saving.");
       return;
     }
@@ -209,31 +205,35 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
                 />
               ) : null;
             })}
-            {currentPath && (() => {
-              const path = Skia.Path.MakeFromSVGString(currentPath);
-              return path ? (
-                <Path path={path} color={drawColor} style="stroke" strokeWidth={strokeWidth} />
-              ) : null;
-            })()}
           </Canvas>
         </GestureDetector>
       </View>
 
       {/* Tools */}
       <View className="bg-black/90 px-6 py-4" style={{ paddingBottom: insets.bottom + 16 }}>
-        {/* Color Picker */}
+        {/* Annotation Type Picker */}
         <View className="mb-4">
-          <Text className="text-white text-sm font-medium mb-2">Color</Text>
+          <Text className="text-white text-sm font-medium mb-2">Annotation Type</Text>
           <View className="flex-row justify-between">
-            {colors.map((color) => (
+            {annotationTypes.map((type) => (
               <Pressable
-                key={color.value}
-                onPress={() => setDrawColor(color.value)}
-                className={`w-12 h-12 rounded-full items-center justify-center ${
-                  drawColor === color.value ? "border-4 border-white" : "border-2 border-gray-600"
-                }`}
-                style={{ backgroundColor: color.value }}
-              />
+                key={type.value}
+                onPress={() => setDrawColor(type.value)}
+                className="flex-1 mx-1"
+              >
+                <View
+                  className={`rounded-xl p-3 items-center ${
+                    drawColor === type.value ? "border-2 border-white" : "border border-gray-600"
+                  }`}
+                  style={{ backgroundColor: type.value + "40" }}
+                >
+                  <View
+                    className="w-8 h-8 rounded-full mb-1"
+                    style={{ backgroundColor: type.value }}
+                  />
+                  <Text className="text-white text-xs font-medium text-center">{type.name}</Text>
+                </View>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -272,9 +272,9 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
           </Pressable>
           <Pressable
             onPress={clearAll}
-            disabled={paths.length === 0 && !currentPath}
+            disabled={paths.length === 0}
             className={`flex-1 rounded-xl py-3 items-center ${
-              paths.length > 0 || currentPath ? "bg-red-600 active:bg-red-700" : "bg-gray-700"
+              paths.length > 0 ? "bg-red-600 active:bg-red-700" : "bg-gray-700"
             }`}
           >
             <View className="flex-row items-center">
@@ -284,6 +284,48 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
           </Pressable>
         </View>
       </View>
+
+      {/* Custom Text Modal */}
+      <Modal visible={showCustomTextModal} transparent animationType="fade">
+        <Pressable
+          className="flex-1 bg-black/70 justify-center items-center"
+          onPress={handleCancelCustomText}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <View className="bg-white rounded-3xl p-6 mx-6 w-80">
+              <Text className="text-xl font-bold text-gray-900 mb-4">Custom Annotation</Text>
+              <Text className="text-sm text-gray-600 mb-3">
+                Enter a description for this annotation:
+              </Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                placeholder="e.g., Water damage, Dent, etc."
+                placeholderTextColor="#9CA3AF"
+                value={customText}
+                onChangeText={setCustomText}
+                autoFocus
+              />
+              <View className="flex-row gap-3">
+                <Pressable
+                  onPress={handleCancelCustomText}
+                  className="flex-1 bg-gray-200 rounded-xl py-3 items-center active:bg-gray-300"
+                >
+                  <Text className="text-gray-700 text-base font-semibold">Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveCustomText}
+                  disabled={!customText.trim()}
+                  className={`flex-1 rounded-xl py-3 items-center ${
+                    customText.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+                  }`}
+                >
+                  <Text className="text-white text-base font-semibold">Save</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

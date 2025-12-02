@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, Switch, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, Switch, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -76,7 +76,11 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1 bg-gray-50"
+      style={{ paddingTop: insets.top }}
+    >
       {/* Header */}
       <View className="bg-white px-6 py-4 border-b border-gray-200">
         <View className="flex-row items-center">
@@ -87,7 +91,7 @@ export default function SettingsScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
         {/* General Settings */}
         <View className="bg-white rounded-2xl p-4 mb-4">
           <Text className="text-lg font-semibold text-gray-900 mb-4">General</Text>
@@ -300,6 +304,6 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text className="text-white text-lg font-semibold">Save Settings</Text>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

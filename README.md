@@ -36,12 +36,16 @@ This app streamlines the collection process for art logistics companies by provi
 - Visual progress bar showing collection completion status
 - Signature display with signer info and captured signature image
 
-### 4. **Progress Tracking**
-- **25%**: Collection created
-- **50%**: Items added with photos
-- **75%**: Collection marked as completed
-- **100%**: Signed and approved
-- Color-coded progress indicator (gray → amber → blue → green)
+### 4. **Progress Tracking (✅ ENHANCED WITH MULTISTEP NAVIGATION)**
+- **Multistep Progress Bar**: Visual step-by-step indicator with clickable navigation
+  - Step 1: Create Collection (always completed)
+  - Step 2: Add Items (clickable to navigate back if collection not signed)
+  - Step 3: Mark Complete (shows when items are added)
+  - Step 4: Sign & Lock (final step, locks the collection)
+- Each step shows completion with green checkmarks
+- Current step highlighted in blue
+- Can navigate back to previous steps (unless collection is signed/locked)
+- Color-coded indicators: Gray (pending) → Blue (current) → Green (completed)
 
 ### 5. **New Collection Creation**
 - Customer information capture (name, address, phone, email)
@@ -49,22 +53,30 @@ This app streamlines the collection process for art logistics companies by provi
 - Additional notes field
 - All data validated before creation
 
-### 6. **Item Documentation (SIMPLIFIED)**
+### 6. **Item Documentation (✅ ENHANCED WITH AUTO-FILL)**
+- **Smart Title Prefill**: Automatically suggests item title based on collection ID (e.g., "A1234-item001")
+- User can easily append, modify, or completely replace the prefilled title
 - **Only title is mandatory** - Quick item entry workflow
 - Optional fields: description, artist name, dimensions, value, condition
 - **Auto-Generated Display IDs**: Each item gets ID based on collection (e.g., "A1234-01", "A1234-02")
 - Condition Rating: Excellent, Good, Fair, Poor, or Damaged
 - Each item has unique internal ID for tracking
 
-### 7. **Photo Capture & Condition Reporting (✅ FULLY FEATURED)**
-- **Fixed camera unmounting bug** - Navigation properly closes both camera and add item screens
-- **No duplicate items** - Items only created once, photos update existing item
-- **Photo Annotation** - Draw on photos with finger to mark damage (like Articheck!)
-  - Multiple colors (Red, Yellow, Green, Blue, White, Black)
+### 7. **Photo Capture & Condition Reporting (✅ FULLY FEATURED & FIXED)**
+- **Fixed Drawing Issues**: Signature and photo annotation drawing now works perfectly
+  - Improved gesture handling with react-native-reanimated and react-native-gesture-handler
+  - Paths render correctly on canvas
+  - Smooth drawing experience
+- **Smart Photo Annotation** - Draw on photos with color-coded annotation types:
+  - 🔴 **Red**: Damage
+  - 🟠 **Orange**: Scratch
+  - 🟢 **Green**: Missing Part
+  - 🔵 **Blue**: Custom (user can type custom text label)
+  - When blue/custom is selected, modal pops up for text input
+  - Each annotation is labeled and saved with the photo
   - Adjustable brush sizes (2px, 3px, 5px, 8px)
   - Undo and Clear All functions
-  - Annotations saved as separate image files
-  - Orange brush icon indicates annotated photos
+  - Annotations persist and reload when viewing photos
 - Built-in camera with flash and flip camera controls
 - Take multiple photos per item
 - Add condition notes specific to each photo
@@ -98,6 +110,12 @@ This app streamlines the collection process for art logistics companies by provi
 - Complete item specifications display
 - Overall condition report with color-coded badges
 - Photo-specific condition notes organized by photo number
+
+### 11. **Settings (✅ KEYBOARD FIXED)**
+- **Fixed Keyboard Overlay**: Keyboard no longer covers text input fields
+- KeyboardAvoidingView properly implemented for iOS and Android
+- Smooth scrolling while typing
+- All settings remain accessible during text entry
 - Tap photos to add or edit condition notes
 - **AI Analyze Button**: Manually trigger AI damage detection on any photo
 - AI analysis results appear with "[AI Analysis]" tag
