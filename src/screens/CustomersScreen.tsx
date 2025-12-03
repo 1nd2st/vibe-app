@@ -1,10 +1,12 @@
-import React, { useState } from "react";
-import { View, Text, FlatList, Pressable, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Text, FlatList, Pressable, TextInput, Modal, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { getAllCustomers, getAllCollections, createCustomer } from "../database/db-collections";
+import type { Customer, Collection } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Customers">;
@@ -12,9 +14,10 @@ type Props = {
 
 export default function CustomersScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const customers = useCollectionStore((s) => s.customers);
-  const collections = useCollectionStore((s) => s.collections);
-  const addCustomer = useCollectionStore((s) => s.addCustomer);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,6 +25,34 @@ export default function CustomersScreen({ navigation }: Props) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [customersData, collectionsData] = await Promise.all([
+        getAllCustomers(),
+        getAllCollections(),
+      ]);
+      setCustomers(customersData);
+      setCollections(collectionsData);
+    } catch (error) {
+      console.error("Failed to load customers:", error);
+      Alert.alert("Error", "Failed to load customers");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const filteredCustomers = customers.filter((cust) =>
     cust.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,21 +63,32 @@ export default function CustomersScreen({ navigation }: Props) {
     return collections.filter((col) => col.customerId === customerId);
   };
 
-  const handleAddCustomer = () => {
+  const handleAddCustomer = async () => {
     if (!customerName.trim()) return;
 
-    addCustomer({
-      name: customerName.trim(),
-      phone: customerPhone.trim(),
-      email: customerEmail.trim(),
-      address: customerAddress.trim(),
-    });
+    setIsSaving(true);
+    try {
+      await createCustomer({
+        name: customerName.trim(),
+        phone: customerPhone.trim(),
+        email: customerEmail.trim(),
+        address: customerAddress.trim(),
+      });
 
-    setCustomerName("");
-    setCustomerPhone("");
-    setCustomerEmail("");
-    setCustomerAddress("");
-    setShowAddModal(false);
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerEmail("");
+      setCustomerAddress("");
+      setShowAddModal(false);
+
+      // Reload customers
+      await loadData();
+    } catch (error) {
+      console.error("Failed to add customer:", error);
+      Alert.alert("Error", "Failed to add customer");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -90,21 +132,26 @@ export default function CustomersScreen({ navigation }: Props) {
       </View>
 
       {/* Customers List */}
-      <FlatList
-        data={filteredCustomers}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={
-          <View className="items-center justify-center py-20">
-            <Ionicons name="people-outline" size={64} color="#D1D5DB" />
-            <Text className="text-gray-400 text-lg font-medium mt-4">No customers yet</Text>
-            <Text className="text-gray-400 text-sm mt-1">Tap + to add your first customer</Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const customerCollections = getCustomerCollections(item.id);
-          const activeCollections = customerCollections.filter((c) => c.status !== "signed").length;
-          const completedCollections = customerCollections.filter((c) => c.status === "signed").length;
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredCustomers}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+          ListEmptyComponent={
+            <View className="items-center justify-center py-20">
+              <Ionicons name="people-outline" size={64} color="#D1D5DB" />
+              <Text className="text-gray-400 text-lg font-medium mt-4">No customers yet</Text>
+              <Text className="text-gray-400 text-sm mt-1">Tap + to add your first customer</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const customerCollections = getCustomerCollections(item.id);
+            const activeCollections = customerCollections.filter((c) => c.status !== "signed").length;
+            const completedCollections = customerCollections.filter((c) => c.status === "signed").length;
 
           return (
             <Pressable
@@ -152,6 +199,7 @@ export default function CustomersScreen({ navigation }: Props) {
           );
         }}
       />
+      )}
 
       {/* Floating Add Customer Button */}
       <Pressable
@@ -258,12 +306,16 @@ export default function CustomersScreen({ navigation }: Props) {
           >
             <Pressable
               onPress={handleAddCustomer}
-              disabled={!customerName.trim()}
+              disabled={!customerName.trim() || isSaving}
               className={`rounded-xl py-4 items-center ${
-                customerName.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+                customerName.trim() && !isSaving ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
               }`}
             >
-              <Text className="text-white text-lg font-semibold">Add Customer</Text>
+              {isSaving ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="text-white text-lg font-semibold">Add Customer</Text>
+              )}
             </Pressable>
           </View>
         </KeyboardAvoidingView>
