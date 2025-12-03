@@ -430,7 +430,7 @@ export const generateCollectionHTML = async (collection: Collection): Promise<{ 
   return { html, hasMissingFiles };
 };
 
-export const emailCollectionReport = async (collection: Collection): Promise<void> => {
+export const emailCollectionReport = async (collection: Collection, customerEmail?: string): Promise<void> => {
   try {
     const isAvailable = await MailComposer.isAvailableAsync();
     if (!isAvailable) {
@@ -439,6 +439,50 @@ export const emailCollectionReport = async (collection: Collection): Promise<voi
     }
 
     const { html: reportHTML, hasMissingFiles } = await generateCollectionHTML(collection);
+
+    // Collect all photo file URIs for attachments
+    const attachments: string[] = [];
+    for (const item of collection.items) {
+      for (const photo of item.photos) {
+        try {
+          // Use annotated image if available, otherwise use original
+          const imageUri = photo.annotatedImageUri || photo.uri;
+
+          // Verify file exists
+          const fileInfo = await FileSystem.getInfoAsync(imageUri);
+          if (fileInfo.exists) {
+            attachments.push(imageUri);
+          }
+        } catch (error) {
+          console.warn("Could not add photo attachment:", photo.id, error);
+        }
+      }
+    }
+
+    // Add signature if available
+    if (collection.signature?.signatureUri) {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(collection.signature.signatureUri);
+        if (fileInfo.exists) {
+          attachments.push(collection.signature.signatureUri);
+        }
+      } catch (error) {
+        console.warn("Could not add signature attachment:", error);
+      }
+    }
+
+    // Prepare email options
+    const emailOptions: any = {
+      subject: `Collection Report - ${collection.customerName} (${collection.id})`,
+      body: reportHTML,
+      isHtml: true,
+      attachments: attachments,
+    };
+
+    // Add recipient if provided
+    if (customerEmail && customerEmail.trim()) {
+      emailOptions.recipients = [customerEmail.trim()];
+    }
 
     // Show warning if some files are missing
     if (hasMissingFiles) {
@@ -450,21 +494,13 @@ export const emailCollectionReport = async (collection: Collection): Promise<voi
           {
             text: "Send Anyway",
             onPress: async () => {
-              await MailComposer.composeAsync({
-                subject: `Collection Report - ${collection.customerName} (${collection.id})`,
-                body: reportHTML,
-                isHtml: true,
-              });
+              await MailComposer.composeAsync(emailOptions);
             },
           },
         ]
       );
     } else {
-      await MailComposer.composeAsync({
-        subject: `Collection Report - ${collection.customerName} (${collection.id})`,
-        body: reportHTML,
-        isHtml: true,
-      });
+      await MailComposer.composeAsync(emailOptions);
     }
   } catch (error) {
     console.error("Error sending email:", error);

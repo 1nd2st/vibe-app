@@ -12,8 +12,8 @@ import { printMultipleItemLabels } from "../utils/zebraPrinter";
 import Breadcrumb from "../components/Breadcrumb";
 import SwipeableItem from "../components/SwipeableItem";
 import * as ContextMenu from "zeego/context-menu";
-import { getCollectionByUuid, updateCollection, deleteCollectionItem } from "../database/db-collections";
-import type { Collection, CollectionItem } from "../types/collection";
+import { getCollectionByUuid, updateCollection, deleteCollectionItem, getCustomerById } from "../database/db-collections";
+import type { Collection, CollectionItem, Customer } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "CollectionDetail">;
@@ -113,7 +113,13 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
 
   const handleEmailReport = async () => {
     setShowExportMenu(false);
-    await emailCollectionReport(collection);
+    try {
+      const customer = await getCustomerById(collection.customerId);
+      await emailCollectionReport(collection, customer?.email);
+    } catch (error) {
+      console.error("Failed to get customer:", error);
+      await emailCollectionReport(collection);
+    }
   };
 
   const handleShareReport = async () => {
