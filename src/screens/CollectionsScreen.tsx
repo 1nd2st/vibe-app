@@ -1,11 +1,12 @@
 import React, { useState, useRef, useCallback } from "react";
-import { View, Text, FlatList, Pressable, TextInput, Modal, NativeSyntheticEvent, TextInputKeyPressEventData } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
+import { View, Text, FlatList, Pressable, TextInput, Modal, NativeSyntheticEvent, TextInputKeyPressEventData, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { getAllCollections } from "../database/db-collections";
+import type { Collection } from "../types/collection";
 
 type BufferedDigit = { time: number; digit: string };
 
@@ -19,7 +20,8 @@ type Props = {
 
 export default function CollectionsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-  const collections = useCollectionStore((s) => s.collections);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed" | "signed">("all");
   const [scannedBarcode, setScannedBarcode] = useState<string>("");
@@ -30,6 +32,27 @@ export default function CollectionsScreen({ navigation }: Props) {
   const keyBuffer = useRef<BufferedDigit[]>([]);
   const lastKeyTime = useRef<number>(0);
   const timeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load collections from SQLite
+  const loadCollections = async () => {
+    setIsLoading(true);
+    try {
+      const collectionsData = await getAllCollections();
+      setCollections(collectionsData);
+    } catch (error) {
+      console.error("Failed to load collections:", error);
+      Alert.alert("Error", "Failed to load collections");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadCollections();
+    }, [])
+  );
 
   // Barcode scanner helper functions
   const getLatestBarcode = (raw: string): string => {
@@ -154,10 +177,10 @@ export default function CollectionsScreen({ navigation }: Props) {
     }, [resetScanState, focusScannerInput])
   );
 
-  const filteredCollections = collections.filter((col) => {
+  const filteredCollections = collections.filter((col: Collection) => {
     const matchesSearch =
       col.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      col.id.toLowerCase().includes(searchQuery.toLowerCase());
+      col.displayId.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || col.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -285,56 +308,62 @@ export default function CollectionsScreen({ navigation }: Props) {
       </View>
 
       {/* Collections List */}
-      <FlatList
-        data={filteredCollections}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={
-          <View className="items-center justify-center py-20">
-            <Ionicons name="cube-outline" size={64} color="#D1D5DB" />
-            <Text className="text-gray-400 text-lg font-medium mt-4">No collections yet</Text>
-            <Text className="text-gray-400 text-sm mt-1">Tap + to create your first collection</Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const statusIcon = getStatusIcon(item.status);
-          const iconColor = getStatusColor(item.status).includes("green") ? "#16A34A" : getStatusColor(item.status).includes("blue") ? "#2563EB" : "#D97706";
-          return (
-            <Pressable
-              onPress={() => navigation.navigate("CollectionDetail", { collectionId: item.id })}
-              className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 active:bg-gray-50"
-            >
-              <View className="flex-row items-start justify-between mb-3">
-                <View className="flex-1">
-                  <Text className="text-lg font-semibold text-gray-900">{item.customerName}</Text>
-                  <Text className="text-sm text-gray-500 mt-0.5">{item.id}</Text>
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredCollections}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+          ListEmptyComponent={
+            <View className="items-center justify-center py-20">
+              <Ionicons name="cube-outline" size={64} color="#D1D5DB" />
+              <Text className="text-gray-400 text-lg font-medium mt-4">No collections yet</Text>
+              <Text className="text-gray-400 text-sm mt-1">Tap + to create your first collection</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const statusIcon = getStatusIcon(item.status);
+            const iconColor = getStatusColor(item.status).includes("green") ? "#16A34A" : getStatusColor(item.status).includes("blue") ? "#2563EB" : "#D97706";
+            return (
+              <Pressable
+                onPress={() => navigation.navigate("CollectionDetail", { collectionId: item.id })}
+                className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 active:bg-gray-50"
+              >
+                <View className="flex-row items-start justify-between mb-3">
+                  <View className="flex-1">
+                    <Text className="text-lg font-semibold text-gray-900">{item.customerName}</Text>
+                    <Text className="text-sm text-gray-500 mt-0.5">{item.displayId}</Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <Ionicons name={statusIcon} size={18} color={iconColor} />
+                    <Text className={`text-sm font-medium ml-1 ${getStatusColor(item.status)}`}>
+                      {item.status === "in_progress" ? "In Progress" : item.status === "completed" ? "Completed" : "Signed"}
+                    </Text>
+                  </View>
                 </View>
-                <View className="flex-row items-center">
-                  <Ionicons name={statusIcon} size={18} color={iconColor} />
-                  <Text className={`text-sm font-medium ml-1 ${getStatusColor(item.status)}`}>
-                    {item.status === "in_progress" ? "In Progress" : item.status === "completed" ? "Completed" : "Signed"}
-                  </Text>
-                </View>
-              </View>
 
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="text-sm text-gray-600">{item.pickupAddress}</Text>
-                  <Text className="text-xs text-gray-400 mt-1">
-                    {new Date(item.collectionDate).toLocaleDateString()} • {item.items.length} items
-                  </Text>
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="text-sm text-gray-600">{item.pickupAddress}</Text>
+                    <Text className="text-xs text-gray-400 mt-1">
+                      {new Date(item.collectionDate).toLocaleDateString()} • {item.items.length} items
+                    </Text>
+                  </View>
                 </View>
-              </View>
 
-              {item.employeeName && (
-                <View className="mt-3 pt-3 border-t border-gray-100">
-                  <Text className="text-xs text-gray-500">Collector: {item.employeeName}</Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        }}
-      />
+                {item.employeeName && (
+                  <View className="mt-3 pt-3 border-t border-gray-100">
+                    <Text className="text-xs text-gray-500">Collector: {item.employeeName}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          }}
+        />
+      )}
 
       {/* Floating Action Button */}
       <Pressable

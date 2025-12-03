@@ -69,6 +69,42 @@ export const MIGRATIONS: Migration[] = [
         deleted_at TEXT
       );
 
+      -- Customer table (must come before Collection and Item)
+      CREATE TABLE IF NOT EXISTS Customer (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT NOT NULL,
+        address TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- Collection table (art collection jobs - must come before Item)
+      CREATE TABLE IF NOT EXISTS Collection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        display_id TEXT UNIQUE NOT NULL,
+        customer_id INTEGER NOT NULL,
+        customer_name TEXT NOT NULL,
+        collection_date INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed', 'signed')),
+        pickup_address TEXT NOT NULL,
+        delivery_address TEXT,
+        employee_name TEXT NOT NULL,
+        notes TEXT,
+        signature_uri TEXT,
+        signer_name TEXT,
+        signer_role TEXT,
+        signature_timestamp INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (customer_id) REFERENCES Customer(id)
+      );
+
       -- Item table (unified for Collection and Inventory)
       CREATE TABLE IF NOT EXISTS Item (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -101,46 +137,6 @@ export const MIGRATIONS: Migration[] = [
         FOREIGN KEY (collection_id) REFERENCES Collection(id),
         FOREIGN KEY (customer_id) REFERENCES Customer(id),
         FOREIGN KEY (created_by) REFERENCES User(id)
-      );
-
-      -- Collection table
-      CREATE TABLE IF NOT EXISTS Collection (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT UNIQUE NOT NULL,
-        display_id TEXT UNIQUE NOT NULL,
-        customer_id INTEGER,
-        customer_name TEXT,
-        collection_date TEXT,
-        status TEXT DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed', 'signed')),
-        pickup_address TEXT,
-        delivery_address TEXT,
-        employee_name TEXT,
-        notes TEXT,
-        total_value REAL,
-        signature_data TEXT,
-        signer_name TEXT,
-        signer_role TEXT,
-        signed_at TEXT,
-        created_by INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        deleted_at TEXT,
-        FOREIGN KEY (customer_id) REFERENCES Customer(id),
-        FOREIGN KEY (created_by) REFERENCES User(id)
-      );
-
-      -- Customer table
-      CREATE TABLE IF NOT EXISTS Customer (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        phone TEXT,
-        email TEXT,
-        address TEXT,
-        notes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        deleted_at TEXT
       );
 
       -- ItemPhoto table
@@ -237,19 +233,6 @@ export const MIGRATIONS: Migration[] = [
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
-      -- Customer table (for art collections)
-      CREATE TABLE IF NOT EXISTS Customer (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        address TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        email TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        deleted_at TEXT
-      );
-
       -- CustomerLocation table (pickup/delivery locations for customers)
       CREATE TABLE IF NOT EXISTS CustomerLocation (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -261,29 +244,6 @@ export const MIGRATIONS: Migration[] = [
         is_default INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (customer_id) REFERENCES Customer(id) ON DELETE CASCADE
-      );
-
-      -- Collection table (art collection jobs)
-      CREATE TABLE IF NOT EXISTS Collection (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uuid TEXT UNIQUE NOT NULL,
-        display_id TEXT UNIQUE NOT NULL,
-        customer_id INTEGER NOT NULL,
-        customer_name TEXT NOT NULL,
-        collection_date INTEGER NOT NULL,
-        status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed', 'signed')),
-        pickup_address TEXT NOT NULL,
-        delivery_address TEXT,
-        employee_name TEXT NOT NULL,
-        notes TEXT,
-        signature_uri TEXT,
-        signer_name TEXT,
-        signer_role TEXT,
-        signature_timestamp INTEGER,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        deleted_at TEXT,
-        FOREIGN KEY (customer_id) REFERENCES Customer(id)
       );
 
       -- CollectionItem table (items within a collection)

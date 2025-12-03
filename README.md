@@ -17,6 +17,24 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
+- ✅ **CRITICAL FIX: Database Table Order** - Fixed foreign key constraint violations
+  - Reordered table definitions so Customer and Collection come before Item
+  - Removed duplicate Collection and Customer table definitions
+  - Fixed "no such column: warehouse_id" initialization error
+  - Database now initializes correctly with proper foreign key relationships
+- ✅ **Collections Screen Migrated to SQLite** - Full async data loading
+  - Converted from Zustand to SQLite database queries
+  - Added loading states with ActivityIndicator
+  - Preserved barcode scanner functionality for hardware scanners
+  - Error handling with user-friendly alerts
+  - Auto-refresh when screen comes into focus
+  - Search by displayId (short ID like "A1234") instead of internal UUID
+- ✅ **New Collection Screen Migrated to SQLite** - Async customer lookup and creation
+  - Loads customer data asynchronously from database
+  - Shows loading state while fetching customer
+  - Creates collections in SQLite with auto-generated display IDs
+  - Saving state with loading indicator on Create button
+  - Proper error handling throughout
 - ✅ **MAJOR: SQLite Database Migration Complete** - Enterprise-grade data persistence
   - Migrated all Collection/Customer data from Zustand to SQLite
   - Full database schema with proper foreign keys and indexes
