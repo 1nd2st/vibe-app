@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useCollectionStore } from "../state/collectionStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { getAllCollections } from "../database/db-collections";
+import type { Collection } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "QRScanner">;
@@ -17,8 +18,20 @@ export default function QRScannerScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
 
-  const collections = useCollectionStore((s) => s.collections);
+  // Load collections from SQLite
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        const data = await getAllCollections();
+        setCollections(data);
+      } catch (error) {
+        console.error("Failed to load collections:", error);
+      }
+    };
+    loadCollections();
+  }, []);
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;

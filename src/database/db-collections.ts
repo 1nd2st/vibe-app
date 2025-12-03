@@ -491,12 +491,18 @@ export async function addCollectionItem(
   const database = getDB();
 
   // Get collection internal ID and info
-  const collection = await database.getFirstAsync<{ id: number; display_id: string }>(
-    "SELECT id, display_id FROM Collection WHERE uuid = ?",
+  const collection = await database.getFirstAsync<{ id: number; display_id: string; customer_id: number }>(
+    "SELECT id, display_id, customer_id FROM Collection WHERE uuid = ?",
     [collectionUuid]
   );
 
   if (!collection) throw new Error("Collection not found");
+
+  // Get customer name
+  const customer = await database.getFirstAsync<{ name: string }>(
+    "SELECT name FROM Customer WHERE id = ?",
+    [collection.customer_id]
+  );
 
   // Count existing items to generate display ID
   const countResult = await database.getFirstAsync<{ count: number }>(
@@ -508,6 +514,25 @@ export async function addCollectionItem(
   const uuid = `ITEM-${generateUUID()}`;
   const displayId = `${collection.display_id}-${itemNumber.toString().padStart(2, "0")}`;
 
+  // Generate inventory number for unified tracking
+  const yearMonth = new Date().toISOString().slice(0, 7).replace("-", "");
+  const itemCount = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM Item WHERE inventory_number LIKE ?",
+    [`INV-${yearMonth}-%`]
+  );
+  const invNumber = (itemCount?.count || 0) + 1;
+  const inventoryNumber = `INV-${yearMonth}-${invNumber.toString().padStart(5, "0")}`;
+
+  // Get Transit Room location
+  const transitLocation = await database.getFirstAsync<{ id: number; full_path: string }>(
+    "SELECT id, full_path FROM Location WHERE is_transit = 1 AND is_active = 1 LIMIT 1"
+  );
+
+  if (!transitLocation) {
+    throw new Error("Transit location not found. Please create a Transit Room location first.");
+  }
+
+  // 1. Insert CollectionItem
   await database.runAsync(
     `INSERT INTO CollectionItem (
       uuid, display_id, collection_id, title, description, artist_name,
@@ -534,19 +559,73 @@ export async function addCollectionItem(
     ]
   );
 
-  // Add photos
+  // 2. Insert Item record for Inventory Management
+  const itemUuidForInventory = `ITM-${generateUUID()}`;
+  await database.runAsync(
+    `INSERT INTO Item (
+      uuid, inventory_number, title, description, artist_name,
+      customer_id, customer_name, collection_id,
+      status, current_location_id, current_location_path,
+      dimensions_length, dimensions_width, dimensions_height, dimensions_unit,
+      estimated_value, currency, overall_condition, condition_notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      itemUuidForInventory,
+      inventoryNumber,
+      itemData.title,
+      itemData.description,
+      itemData.artistName || null,
+      collection.customer_id,
+      customer?.name || null,
+      collection.id,
+      "In transit",
+      transitLocation.id,
+      transitLocation.full_path,
+      itemData.dimensions.length,
+      itemData.dimensions.width,
+      itemData.dimensions.height,
+      itemData.dimensions.unit,
+      itemData.estimatedValue,
+      itemData.currency,
+      itemData.overallCondition,
+      itemData.conditionNotes,
+    ]
+  );
+
+  // 3. Record COLLECTED action in ItemHistory
   const itemRow = await database.getFirstAsync<{ id: number }>(
+    "SELECT id FROM Item WHERE uuid = ?",
+    [itemUuidForInventory]
+  );
+
+  if (itemRow) {
+    await database.runAsync(
+      `INSERT INTO ItemHistory (
+        item_id, action_type, to_location_path, to_status, notes
+      ) VALUES (?, ?, ?, ?, ?)`,
+      [
+        itemRow.id,
+        "COLLECTED",
+        transitLocation.full_path,
+        "In transit",
+        `Collected as part of ${collection.display_id} - ${itemData.title}`,
+      ]
+    );
+  }
+
+  // 4. Add photos to CollectionItem
+  const collectionItemRow = await database.getFirstAsync<{ id: number }>(
     "SELECT id FROM CollectionItem WHERE uuid = ?",
     [uuid]
   );
 
-  if (itemRow && itemData.photos.length > 0) {
+  if (collectionItemRow && itemData.photos.length > 0) {
     for (const photo of itemData.photos) {
-      await addCollectionItemPhoto(itemRow.id, photo);
+      await addCollectionItemPhoto(collectionItemRow.id, photo);
     }
   }
 
-  // Update collection timestamp
+  // 5. Update collection timestamp
   await database.runAsync(
     "UPDATE Collection SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
     [collection.id]

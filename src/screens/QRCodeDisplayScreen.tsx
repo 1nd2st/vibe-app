@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { View, Text, Pressable, Alert, ScrollView, Share } from "react-native";
+import React, { useRef, useState, useEffect } from "react";
+import { View, Text, Pressable, Alert, ScrollView, Share, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,7 +8,8 @@ import { RootStackParamList } from "../navigation/RootNavigator";
 import QRCode from "react-native-qrcode-svg";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import { useCollectionStore } from "../state/collectionStore";
+import { getCollectionByUuid } from "../database/db-collections";
+import type { Collection, CollectionItem } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "QRCodeDisplay">;
@@ -21,8 +22,35 @@ export default function QRCodeDisplayScreen({ navigation, route }: Props) {
   const qrRef = useRef<View>(null);
   const [selectedItemIndex, setSelectedItemIndex] = useState(0);
 
-  const collections = useCollectionStore((s) => s.collections);
-  const collection = collections.find((c) => c.id === collectionId);
+  // SQLite state
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load collection from SQLite
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const collectionData = await getCollectionByUuid(collectionId);
+        setCollection(collectionData);
+      } catch (error) {
+        console.error("Failed to load collection:", error);
+        Alert.alert("Error", "Failed to load collection");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [collectionId]);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text className="text-gray-600 text-base mt-4">Loading collection...</Text>
+      </View>
+    );
+  }
 
   if (!collection) {
     return (
@@ -37,7 +65,7 @@ export default function QRCodeDisplayScreen({ navigation, route }: Props) {
   }
 
   const itemsToShow = itemIds
-    ? collection.items.filter((item) => itemIds.includes(item.id))
+    ? collection.items.filter((item: CollectionItem) => itemIds.includes(item.id))
     : collection.items;
 
   const currentItem = itemsToShow[selectedItemIndex];

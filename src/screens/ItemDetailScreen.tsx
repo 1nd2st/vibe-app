@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, ScrollView, Image, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -11,6 +11,8 @@ import { analyzeImageForDamage } from "../services/aiDamageDetection";
 import Breadcrumb from "../components/Breadcrumb";
 import ZoomableImage from "../components/ZoomableImage";
 import { printItemLabel } from "../utils/zebraPrinter";
+import { getCollectionItemByUuid, getCollectionByUuid, updateCollectionItemPhoto, deleteCollectionItemPhoto } from "../database/db-collections";
+import type { CollectionItem, Collection, ItemPhoto } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ItemDetail">;
@@ -21,9 +23,11 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { itemId, collectionId } = route.params;
 
-  const item = useCollectionStore((s) => s.getItem(itemId));
-  const collection = useCollectionStore((s) => s.collections.find((c) => c.id === collectionId));
-  const updateItem = useCollectionStore((s) => s.updateItem);
+  // SQLite state
+  const [item, setItem] = useState<CollectionItem | null>(null);
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
 
   // Use individual selectors to avoid infinite loop from object creation
@@ -42,6 +46,44 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<number>>(new Set());
   const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  // Load item and collection from SQLite
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [itemData, collectionData] = await Promise.all([
+        getCollectionItemByUuid(itemId),
+        getCollectionByUuid(collectionId),
+      ]);
+      setItem(itemData);
+      setCollection(collectionData);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      Alert.alert("Error", "Failed to load item details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [itemId, collectionId]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [itemId, collectionId])
+  );
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text className="text-gray-600 text-base mt-4">Loading item...</Text>
+      </View>
+    );
+  }
 
   if (!item) {
     return (
@@ -103,14 +145,19 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     setShowNoteModal(true);
   };
 
-  const saveNote = () => {
-    if (selectedPhotoIndex !== null) {
-      const updatedPhotos = [...item.photos];
-      updatedPhotos[selectedPhotoIndex] = {
-        ...updatedPhotos[selectedPhotoIndex],
-        conditionNotes: noteText.trim(),
-      };
-      updateItem(itemId, { photos: updatedPhotos });
+  const saveNote = async () => {
+    if (selectedPhotoIndex !== null && item) {
+      const photo = item.photos[selectedPhotoIndex];
+      try {
+        await updateCollectionItemPhoto(photo.id, {
+          conditionNotes: noteText.trim(),
+        });
+        // Reload data to show updated note
+        await loadData();
+      } catch (error) {
+        console.error("Failed to save note:", error);
+        Alert.alert("Error", "Failed to save note");
+      }
     }
     setShowNoteModal(false);
     setNoteText("");
@@ -163,8 +210,8 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     setSelectedPhotos(new Set());
   };
 
-  const handleBatchDelete = () => {
-    if (selectedPhotos.size === 0) return;
+  const handleBatchDelete = async () => {
+    if (selectedPhotos.size === 0 || !item) return;
 
     Alert.alert(
       "Delete Photos",
@@ -174,11 +221,21 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            const updatedPhotos = item.photos.filter((_, index) => !selectedPhotos.has(index));
-            updateItem(itemId, { photos: updatedPhotos });
-            setSelectedPhotos(new Set());
-            setSelectionMode(false);
+          onPress: async () => {
+            try {
+              // Delete each selected photo from SQLite
+              const photosToDelete = item.photos.filter((_, index) => selectedPhotos.has(index));
+              for (const photo of photosToDelete) {
+                await deleteCollectionItemPhoto(photo.id);
+              }
+              // Reload data to show updated photos
+              await loadData();
+              setSelectedPhotos(new Set());
+              setSelectionMode(false);
+            } catch (error) {
+              console.error("Failed to delete photos:", error);
+              Alert.alert("Error", "Failed to delete photos");
+            }
           },
         },
       ]

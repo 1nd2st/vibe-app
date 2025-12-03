@@ -1,6 +1,5 @@
-import React, { useRef, useState } from "react";
-import { View, Text, Pressable, TextInput, Alert, ScrollView, Image, Modal, KeyboardAvoidingView, Platform } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
+import React, { useRef, useState, useEffect } from "react";
+import { View, Text, Pressable, TextInput, Alert, ScrollView, Image, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -12,6 +11,8 @@ import { useSharedValue, runOnJS, useDerivedValue } from "react-native-reanimate
 import { captureRef } from "react-native-view-shot";
 import { emailCollectionReport } from "../utils/collectionReports";
 import * as FileSystem from "expo-file-system";
+import { getCollectionByUuid, getCustomerById, signCollection as signCollectionInDB, updateCustomer } from "../database/db-collections";
+import type { Collection, Customer } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "SignCollection">;
@@ -23,19 +24,40 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
   const { collectionId } = route.params;
   const signatureViewRef = useRef<View>(null);
 
-  const collection = useCollectionStore((s) =>
-    s.collections.find((c) => c.id === collectionId)
-  );
-  const customers = useCollectionStore((s) => s.customers);
-  const customer = customers.find((c) => c.id === collection?.customerId);
-  const signCollection = useCollectionStore((s) => s.signCollection);
+  // SQLite state
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [paths, setPaths] = useState<string[]>([]);
   const [signerName, setSignerName] = useState("");
   const [signerRole, setSignerRole] = useState("");
   const [currentDrawing, setCurrentDrawing] = useState("");
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailAddress, setEmailAddress] = useState(customer?.email || "");
+  const [emailAddress, setEmailAddress] = useState("");
+
+  // Load collection and customer from SQLite
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const collectionData = await getCollectionByUuid(collectionId);
+        setCollection(collectionData);
+
+        if (collectionData?.customerId) {
+          const customerData = await getCustomerById(collectionData.customerId);
+          setCustomer(customerData);
+          setEmailAddress(customerData?.email || "");
+        }
+      } catch (error) {
+        console.error("Failed to load collection:", error);
+        Alert.alert("Error", "Failed to load collection");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [collectionId]);
 
   // Calculate total value
   const totalValue = collection?.items.reduce((sum, item) => {
@@ -74,6 +96,15 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     })
     .runOnJS(true);
 
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text className="text-gray-600 text-base mt-4">Loading collection...</Text>
+      </View>
+    );
+  }
+
   if (!collection) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
@@ -111,8 +142,11 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
 
     // Update customer email if changed
     if (customer && emailAddress.trim() !== customer.email) {
-      const updateCustomer = useCollectionStore.getState().updateCustomer;
-      updateCustomer(customer.id, { email: emailAddress.trim() });
+      try {
+        await updateCustomer(customer.id, { email: emailAddress.trim() });
+      } catch (error) {
+        console.error("Failed to update customer email:", error);
+      }
     }
 
     await emailCollectionReport(collection);
@@ -149,7 +183,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
         to: permanentUri,
       });
 
-      signCollection(collectionId, {
+      await signCollectionInDB(collectionId, {
         signatureUri: permanentUri,
         signerName: signerName.trim(),
         signerRole: signerRole.trim(),

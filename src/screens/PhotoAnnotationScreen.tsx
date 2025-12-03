@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, Pressable, Alert, Dimensions, TextInput, Modal } from "react-native";
+import { View, Text, Pressable, Alert, Dimensions, TextInput, Modal, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -9,9 +9,10 @@ import { Canvas, Path, Skia, Image as SkiaImage, useImage, makeImageFromView } f
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useSharedValue, runOnJS } from "react-native-reanimated";
 import * as FileSystem from "expo-file-system";
-import { useCollectionStore } from "../state/collectionStore";
 import { captureRef } from "react-native-view-shot";
 import ViewShot from "react-native-view-shot";
+import { getCollectionItemByUuid, updateCollectionItemPhoto } from "../database/db-collections";
+import type { CollectionItem, ItemPhoto } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "PhotoAnnotation">;
@@ -24,10 +25,11 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const canvasRef = useRef<any>(null);
   const viewShotRef = useRef<any>(null);
 
-  const item = useCollectionStore((s) => s.getItem(itemId));
-  const updateItem = useCollectionStore((s) => s.updateItem);
+  // SQLite state
+  const [item, setItem] = useState<CollectionItem | null>(null);
+  const [photo, setPhoto] = useState<ItemPhoto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const photo = item?.photos.find((p) => p.id === photoId);
   const image = useImage(photo?.uri || "");
 
   const [paths, setPaths] = useState<Array<{ path: string; color: string; width: number; label?: string }>>([]);
@@ -40,6 +42,25 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
   const [currentDrawing, setCurrentDrawing] = useState("");
 
   const currentPathString = useSharedValue("");
+
+  // Load item and photo from SQLite
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const itemData = await getCollectionItemByUuid(itemId);
+        setItem(itemData);
+        const foundPhoto = itemData?.photos.find((p: ItemPhoto) => p.id === photoId);
+        setPhoto(foundPhoto || null);
+      } catch (error) {
+        console.error("Failed to load photo:", error);
+        Alert.alert("Error", "Failed to load photo");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [itemId, photoId]);
 
   const annotationTypes = [
     { name: "Damage", value: "#FF0000", label: "Damage" },
@@ -63,6 +84,15 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
       }
     }
   }, [photo?.annotationData]);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text className="text-gray-600 text-base mt-4">Loading photo...</Text>
+      </View>
+    );
+  }
 
   if (!item || !photo) {
     return (
@@ -145,6 +175,11 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
       return;
     }
 
+    if (!item || !photo) {
+      Alert.alert("Error", "Item or photo not found");
+      return;
+    }
+
     try {
       // Capture the annotated image as a composite using ViewShot to temp location
       const tempAnnotatedUri = await captureRef(viewShotRef, {
@@ -167,18 +202,11 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
         canvasSize: canvasSize,
       };
 
-      // Update the photo with both annotation data and the composite image
-      const updatedPhotos = item.photos.map((p) =>
-        p.id === photoId
-          ? {
-              ...p,
-              annotationData: JSON.stringify(annotationData),
-              annotatedImageUri: permanentAnnotatedUri, // Save the permanent composite URI
-            }
-          : p
-      );
-
-      updateItem(itemId, { photos: updatedPhotos });
+      // Update the photo in SQLite
+      await updateCollectionItemPhoto(photoId, {
+        annotationData: JSON.stringify(annotationData),
+        annotatedImageUri: permanentAnnotatedUri,
+      });
 
       Alert.alert("Saved", "Annotations have been saved successfully!", [
         {

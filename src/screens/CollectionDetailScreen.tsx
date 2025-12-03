@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, FlatList, Pressable, Alert, Modal, Image, ActivityIndicator } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
-import { useUndoStore } from "../state/undoStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -14,7 +12,7 @@ import { printMultipleItemLabels } from "../utils/zebraPrinter";
 import Breadcrumb from "../components/Breadcrumb";
 import SwipeableItem from "../components/SwipeableItem";
 import * as ContextMenu from "zeego/context-menu";
-import { getCollectionByUuid } from "../database/db-collections";
+import { getCollectionByUuid, updateCollection, deleteCollectionItem } from "../database/db-collections";
 import type { Collection, CollectionItem } from "../types/collection";
 
 type Props = {
@@ -55,16 +53,6 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     }, [collectionId])
   );
 
-  // Keep Zustand for item operations (will be migrated later if needed)
-  const updateCollection = useCollectionStore((s) => s.updateCollection);
-  const deleteItem = useCollectionStore((s) => s.deleteItem);
-  const addItem = useCollectionStore((s) => s.addItem);
-  const getItem = useCollectionStore((s) => s.getItem);
-
-  const addUndoAction = useUndoStore((s) => s.addUndoAction);
-  const getLastUndo = useUndoStore((s) => s.getLastUndo);
-  const removeLastUndo = useUndoStore((s) => s.removeLastUndo);
-
   // Use individual selectors to avoid infinite loop from object creation
   const printerEnabled = useSettingsStore((s) => s.settings.printerEnabled);
   const printerIp = useSettingsStore((s) => s.settings.printerIp);
@@ -74,7 +62,6 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const printerDpi = useSettingsStore((s) => s.settings.printerDpi);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [showUndoToast, setShowUndoToast] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isPrintingLabels, setIsPrintingLabels] = useState(false);
@@ -238,45 +225,32 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleDeleteItem = (itemId: string, itemTitle: string) => {
-    if (collection.status === "signed") {
+  const handleDeleteItem = async (itemId: string, itemTitle: string) => {
+    if (!collection || collection.status === "signed") {
       Alert.alert("Cannot Delete", "This collection is signed and locked. Items cannot be deleted.");
       return;
     }
 
-    const itemToDelete = getItem(itemId);
-    if (!itemToDelete) return;
-
-    // Store for undo
-    addUndoAction({
-      type: "delete_item",
-      timestamp: Date.now(),
-      data: {
-        item: itemToDelete,
-        collectionId: collection.id,
-      },
-    });
-
-    // Delete the item
-    deleteItem(itemId);
-
-    // Show undo toast
-    setShowUndoToast(true);
-    setTimeout(() => setShowUndoToast(false), 3000);
-  };
-
-  const handleUndo = () => {
-    const lastAction = getLastUndo();
-    if (!lastAction || lastAction.type !== "delete_item") return;
-
-    // Restore the item
-    addItem(lastAction.data.collectionId, lastAction.data.item);
-
-    // Remove from undo stack
-    removeLastUndo();
-
-    // Hide toast
-    setShowUndoToast(false);
+    Alert.alert(
+      "Delete Item",
+      `Are you sure you want to delete "${itemTitle}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCollectionItem(itemId);
+              await loadCollection(); // Reload to show updated list
+            } catch (error) {
+              console.error("Failed to delete item:", error);
+              Alert.alert("Error", "Failed to delete item");
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Calculate progress
@@ -872,31 +846,6 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           </Pressable>
         </Pressable>
       </Modal>
-
-      {/* Undo Toast */}
-      {showUndoToast && (
-        <View
-          className="absolute bottom-20 left-6 right-6 bg-gray-900 rounded-xl p-4 flex-row items-center justify-between"
-          style={{
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-        >
-          <View className="flex-1 mr-4">
-            <Text className="text-white font-semibold">Item deleted</Text>
-            <Text className="text-gray-300 text-sm">Tap Undo to restore</Text>
-          </View>
-          <Pressable
-            onPress={handleUndo}
-            className="bg-blue-600 rounded-lg px-4 py-2 active:bg-blue-700"
-          >
-            <Text className="text-white font-semibold">Undo</Text>
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 }
