@@ -17,11 +17,12 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
-- ⚠️ **KNOWN ISSUE: CollectionDetailScreen Not Migrated** - Critical bug blocking collection creation
-  - CollectionDetailScreen still uses Zustand instead of SQLite
-  - After creating a collection, navigating to it shows "Collection not found"
-  - This screen needs full migration to SQLite (complex - has undo functionality, item management)
-  - **WORKAROUND**: Collections are created successfully in database, just can't view them yet
+- ✅ **FIXED: CollectionDetailScreen Migration Complete** - Collection viewing now works!
+  - Migrated CollectionDetailScreen to load collections from SQLite database
+  - Added async data loading with loading states and error handling
+  - Fixed customer references to use collection.customerId and collection.customerName
+  - Collections can now be created AND viewed successfully
+  - Full collection workflow now functional: Create → View → Navigate
 - ✅ **FIXED: Customer Collections Count** - Customers now show correct collection counts
   - Added LEFT JOIN with Customer table in getAllCollections query
   - mapRowToCollection now correctly maps customer_uuid from JOIN result

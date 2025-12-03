@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, FlatList, Pressable, Alert, Modal, Image, ActivityIndicator } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useUndoStore } from "../state/undoStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
@@ -13,6 +14,8 @@ import { printMultipleItemLabels } from "../utils/zebraPrinter";
 import Breadcrumb from "../components/Breadcrumb";
 import SwipeableItem from "../components/SwipeableItem";
 import * as ContextMenu from "zeego/context-menu";
+import { getCollectionByUuid } from "../database/db-collections";
+import type { Collection, CollectionItem } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "CollectionDetail">;
@@ -23,15 +26,40 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { collectionId } = route.params;
 
-  const collection = useCollectionStore((s) =>
-    s.collections.find((c) => c.id === collectionId)
+  // SQLite state
+  const [collection, setCollection] = useState<Collection | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load collection from SQLite
+  const loadCollection = async () => {
+    setIsLoading(true);
+    try {
+      const collectionData = await getCollectionByUuid(collectionId);
+      setCollection(collectionData);
+    } catch (error) {
+      console.error("Failed to load collection:", error);
+      Alert.alert("Error", "Failed to load collection");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCollection();
+  }, [collectionId]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadCollection();
+    }, [collectionId])
   );
+
+  // Keep Zustand for item operations (will be migrated later if needed)
   const updateCollection = useCollectionStore((s) => s.updateCollection);
   const deleteItem = useCollectionStore((s) => s.deleteItem);
   const addItem = useCollectionStore((s) => s.addItem);
   const getItem = useCollectionStore((s) => s.getItem);
-  const customers = useCollectionStore((s) => s.customers);
-  const customer = customers.find((c) => c.id === collection?.customerId);
 
   const addUndoAction = useUndoStore((s) => s.addUndoAction);
   const getLastUndo = useUndoStore((s) => s.getLastUndo);
@@ -616,8 +644,8 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
 
                   <Pressable
                     onPress={() => {
-                      if (customer) {
-                        navigation.navigate("CustomerDetail", { customerId: customer.id });
+                      if (collection?.customerId) {
+                        navigation.navigate("CustomerDetail", { customerId: collection.customerId });
                       } else {
                         navigation.navigate("Customers");
                       }
@@ -627,15 +655,15 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                     <View className="flex-row items-center">
                       <Ionicons name="person" size={20} color="#16A34A" />
                       <Text className="text-green-700 text-base font-semibold ml-2">
-                        {customer ? `View ${customer.name}` : "View All Customers"}
+                        {collection?.customerId ? `View ${collection.customerName}` : "View All Customers"}
                       </Text>
                     </View>
                   </Pressable>
 
                   <Pressable
                     onPress={() => {
-                      if (customer) {
-                        navigation.navigate("NewCollection", { customerId: customer.id });
+                      if (collection?.customerId) {
+                        navigation.navigate("NewCollection", { customerId: collection.customerId });
                       } else {
                         navigation.navigate("Customers");
                       }
@@ -645,7 +673,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                     <View className="flex-row items-center">
                       <Ionicons name="add-circle" size={20} color="#FFFFFF" />
                       <Text className="text-white text-base font-semibold ml-2">
-                        {customer ? `New Collection for ${customer.name}` : "Create New Collection"}
+                        {collection?.customerId ? `New Collection for ${collection.customerName}` : "Create New Collection"}
                       </Text>
                     </View>
                   </Pressable>
