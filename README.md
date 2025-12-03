@@ -1,6 +1,18 @@
-# Art Logistics & Condition Reporting App
+# Art Logistics & Inventory Management App
 
-A professional mobile application for art moving and logistics companies to document item collections with comprehensive condition reporting, digital signatures, and export capabilities - inspired by Articheck's professional standards.
+A comprehensive mobile application for art moving companies and warehouse operations, combining professional collection documentation with full inventory management capabilities - all in one powerful app.
+
+## 🎯 Dual-Purpose Application
+
+This app serves two main functions:
+
+### 1. **Collection Management** (Field Operations)
+Document item collections at customer sites with comprehensive condition reporting, digital signatures, and professional export capabilities.
+
+### 2. **Inventory Management** (Warehouse Operations)
+Track and manage warehouse inventory with barcode scanning, location hierarchies, full audit trails, and real-time item tracking.
+
+---
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
@@ -143,7 +155,9 @@ A professional mobile application for art moving and logistics companies to docu
 
 ## Overview
 
-This app streamlines the collection process for art logistics companies by providing a complete digital workflow for:
+This app streamlines workflows for art logistics companies by providing two integrated systems:
+
+### Collection Module (Field Operations)
 - Managing customers and their locations (pickup/delivery addresses) with full CRUD operations
 - Creating and managing collections with auto-generated QR-compatible IDs
 - Documenting items with photos and detailed condition reports (only title required)
@@ -152,7 +166,24 @@ This app streamlines the collection process for art logistics companies by provi
 - Exporting professional HTML reports with embedded photos (no branding)
 - Item CRUD with read-only protection after signature
 
+### Inventory Management Module (Warehouse Operations) 🆕
+- **User Authentication**: Secure login with role-based permissions (admin/user)
+- **Location Hierarchy**: Unlimited-depth location tree (Warehouse → Room → Shelf → Bin → etc.)
+- **Barcode Scanning**: Scan items using camera or enter inventory numbers manually
+- **Scan & Put Away**: Primary workflow for receiving items and assigning storage locations
+- **Batch Mode**: Assign multiple items to the same location quickly
+- **Search & Filter**: Find items by ID, description, customer, or status
+- **Full Audit Trail**: Every item action logged with timestamp, user, and details
+- **Item History**: Complete history for each item (collection, moves, status changes, notes)
+- **Location Management**: Browse, create, rename, and disable storage locations
+- **Status Tracking**: Track items through their lifecycle (Collected → In Transit → In Storage → Packed → Shipped → Delivered)
+- **Transit Room**: Default location for newly collected items
+- **SQLite Database**: Fast, reliable local storage with full relational data
+- **Admin Controls**: Location management restricted to administrators
+
 ## Key Features
+
+### Collection Module Features
 
 ### 1. **Customer Management**
 - **Customer Hierarchy**: Customers → Collections → Items
@@ -343,6 +374,231 @@ This app streamlines the collection process for art logistics companies by provi
 3. **Mark as Completed** (75%) → Review all items
 4. **Get Signature** (100%) → Client/manager approval with full item list
 5. **Export & Share** → Send professional reports
+
+---
+
+## Inventory Management Module 🆕
+
+### App Entry & Authentication
+When the app starts, users must log in with their credentials:
+- **Default Login**: `username: admin`, `password: admin`
+- **Role-Based Access**: Admin users can create/modify locations; regular users can move items
+
+### Home Screen
+After login, users see two main options:
+1. **Collection** - Opens the existing collection management flow
+2. **Inventory Management** - Opens the new inventory menu
+
+### Inventory Management Menu
+Three primary workflows:
+
+#### 1. **Scan & Put Away** (Main Workflow)
+The primary workflow for warehouse operations:
+
+**Step 1: Scan Item**
+- Open camera to scan barcode/QR code
+- Or tap "Enter ID Manually" if label is damaged
+- Supports all major barcode formats (UPC, Code 128, QR, etc.)
+
+**Step 2: Find or Create Item**
+- If item exists: Show item summary with current location and status
+- If item doesn't exist: Show form to create new item
+  - Inventory number (pre-filled from scan)
+  - Description (optional)
+  - Customer name (optional)
+  - New items automatically placed in "Warehouse 1 / Transit Room"
+  - History entry created: `COLLECTED` action
+
+**Step 3: Choose Location**
+- Tap "Choose Location" to open location picker
+- Navigate through location hierarchy (unlimited depth)
+- Select final destination
+- Item moved to location with `MOVED` history entry
+- Status updated to "In storage"
+
+**Batch Mode** (Efficiency Feature)
+- After choosing a location, enable "Batch Mode"
+- All subsequent scans automatically move to the same location
+- Shows batch count and current destination
+- Tap "Change" to select a different location
+- Perfect for moving multiple items to the same shelf/bin
+
+#### 2. **Search Item**
+Find items quickly:
+- Search by inventory number, description, or customer name
+- Filter by status: All, Collected, In transit, In storage, Packed, Shipped, Delivered, Cancelled
+- Results show item location and current status
+- Tap any item to view full details
+
+#### 3. **Browse Locations**
+Navigate the warehouse structure:
+- Start at top-level warehouses
+- Drill down through hierarchical locations
+- Each location shows item count
+- Tap location to see child locations
+- Tap "View Items" to see all items in that location
+- **Admin Only**: Rename or disable locations
+- **Admin Only**: Add new child locations at any level
+
+### Location Picker (Reusable Component)
+Used throughout the app for location selection:
+- **Breadcrumb Navigation**: Always know your current path
+- **Drill-Down**: Tap locations to navigate deeper
+- **Go Back**: Tap breadcrumb items to jump to parent levels
+- **Use Current**: Select the current level as destination
+- **Add New** (Admin): Create child locations on the fly
+- **Visual Indicators**: Transit locations marked with special icon
+- **Item Counts**: See how many items are in each location
+
+### Item Detail Screen
+Complete item information and management:
+- Inventory number, description, customer
+- Current location (full path)
+- Current status with dropdown to change
+- Notes field for special instructions or damage reports
+- **History Section**: Full audit trail showing:
+  - All moves with from/to locations
+  - Status changes
+  - Notes added
+  - Timestamp and user for each action
+- **Quick Actions**:
+  - Move Item: Opens location picker
+  - Add Note: Add detailed notes about the item
+
+### Data Model
+
+#### Location Table
+```sql
+- id: Auto-increment primary key
+- name: Location name (e.g., "Room 1", "Shelf A")
+- parent_id: Reference to parent location (null for warehouses)
+- full_path: Complete path (e.g., "Warehouse 1 / Room 3 / Shelf 5")
+- level: Depth in hierarchy (0 = warehouse, 1 = room, etc.)
+- is_transit: Boolean flag for default transit locations
+- is_active: Soft delete flag (disabled locations hidden)
+- created_at, updated_at: Timestamps
+```
+
+#### Item Table
+```sql
+- id: Auto-increment primary key
+- inventory_number: Unique identifier (barcode value)
+- description: Item description
+- customer_name: Associated customer
+- status: One of 7 fixed values (see below)
+- current_location_id: FK to Location
+- current_location_path: Denormalized full path for quick display
+- notes: Free-text notes
+- is_archived: Soft delete flag
+- created_at, updated_at: Timestamps
+```
+
+#### ItemHistory Table (Append-Only Audit Log)
+```sql
+- id: Auto-increment primary key
+- item_id: FK to Item
+- timestamp: When action occurred
+- user_id: Who performed the action
+- user_name: Username for display
+- action_type: COLLECTED, MOVED, STATUS_CHANGE, NOTE, etc.
+- from_location_path: Previous location (for moves)
+- to_location_path: New location (for moves)
+- from_status: Previous status (for status changes)
+- to_status: New status (for status changes)
+- notes: Additional context
+- device_id: Optional device tracking
+```
+
+### Item Status Values
+Items can have one of these statuses:
+1. **Collected** - Item created during collection
+2. **In transit** - Moving between locations
+3. **In storage** - Stored in warehouse location
+4. **Packed** - Prepared for shipment/delivery
+5. **Shipped** - Left the warehouse
+6. **Delivered** - Delivered to customer
+7. **Cancelled** - Cancelled or removed
+
+**Status Transitions**: Users can change any status (no strict validation), allowing flexibility for real-world scenarios.
+
+### Key Design Decisions
+
+**1. Transit Room Concept**
+- Every warehouse should have a "Transit Room"
+- New items from collections default here
+- Acts as a staging area before final storage
+- Marked with special icon in UI
+
+**2. Unlimited Location Depth**
+- No artificial limits on hierarchy
+- Examples:
+  - "Warehouse 1 / Room 3 / Shelf A / Bin 12"
+  - "Warehouse 2 / Cold Storage / Rack 5 / Level 2 / Spot 8"
+- Full path stored for quick display
+- Level calculated for UI organization
+
+**3. Soft Deletes**
+- Locations: Set `is_active = false` (can't delete if has items)
+- Items: Set `is_archived = true` (preserves history)
+- Prevents data loss and maintains audit integrity
+
+**4. History is Append-Only**
+- Never edit or delete history records
+- Every change creates a new history entry
+- Complete audit trail for compliance
+
+**5. Role-Based Permissions**
+- **Admin**: Can create, rename, disable locations
+- **Regular User**: Can scan items, move items, add notes
+- Location management restricted to prevent accidental changes
+
+### Inventory Management Workflow Examples
+
+**Example 1: Receiving Items from Collection**
+1. Items arrive from customer site
+2. Worker opens "Scan & Put Away"
+3. Scans first item → Already in system (from collection flow)
+4. Item shows current location: "Warehouse 1 / Transit Room"
+5. Worker taps "Choose Location"
+6. Navigates: Warehouse 1 → Long Term Storage → Shelf 12 → Bin 3
+7. Taps "Use Bin 3"
+8. Item moved, history logged
+9. Repeat for remaining items (or use Batch Mode)
+
+**Example 2: Batch Processing**
+1. Worker needs to move 20 items to the same location
+2. Opens "Scan & Put Away"
+3. Taps "Enable Batch Mode"
+4. Chooses destination: Warehouse 1 / Overflow / Rack 7
+5. Scans each item → Automatically moved to Rack 7
+6. Batch counter increments: "Items moved: 20"
+7. Change destination anytime with "Change" button
+
+**Example 3: Finding an Item**
+1. Customer calls asking about item "A1234-05"
+2. Worker opens "Search Item"
+3. Types "A1234-05" in search
+4. Item appears with location: "Warehouse 1 / Room 3 / Shelf 12"
+5. Tap item to see full history
+6. Check when it arrived, who moved it, and all status changes
+
+**Example 4: Organizing a Room**
+1. Admin opens "Browse Locations"
+2. Navigates to: Warehouse 1 → New Wing
+3. Taps "Add New Location" → Creates "Room 5"
+4. Navigates into "Room 5"
+5. Creates child locations: "Shelf A", "Shelf B", "Shelf C"
+6. Each shelf can have "Bin 1", "Bin 2", etc.
+7. Workers can now assign items to these specific locations
+
+### Database & Performance
+- **SQLite**: Local database for fast, offline-first operation
+- **Indexed Queries**: Fast lookups by inventory_number, location, status
+- **Denormalized Paths**: Full location paths stored for quick display
+- **Optimized Counts**: Efficient queries for item counts per location
+- **Transaction Safety**: Database operations wrapped in transactions
+
+---
 
 ## Technical Implementation
 
