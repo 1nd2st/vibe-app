@@ -271,17 +271,26 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const handleStepClick = (stepNumber: number) => {
     if (collection.status === "signed") return; // Can't navigate if signed
 
-    // Only allow going back to previous steps
-    if (stepNumber >= currentStep) return;
+    // Allow clicking on Step 2 (Add Items) to revert from completed back to in_progress
+    if (stepNumber === 2 && currentStep === 3) {
+      Alert.alert(
+        "Return to Adding Items?",
+        "This will revert the collection status back to 'In Progress' so you can add more items.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes, Add More Items",
+            onPress: () => {
+              updateCollection(collectionId, { status: "in_progress" });
+            },
+          },
+        ]
+      );
+      return;
+    }
 
-    if (stepNumber === 2 && collection.items.length > 0) {
-      // Go to first item or show items list (already on this screen)
-      return;
-    }
-    if (stepNumber === 1) {
-      // Already created, can't go back
-      return;
-    }
+    // Can't go forward, only backward
+    if (stepNumber >= currentStep) return;
   };
 
   return (
@@ -345,7 +354,10 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                 {/* Step Circle */}
                 <Pressable
                   onPress={() => handleStepClick(step.number)}
-                  disabled={step.number >= currentStep || collection.status === "signed"}
+                  disabled={
+                    collection.status === "signed" ||
+                    (step.number >= currentStep && !(step.number === 2 && currentStep === 3))
+                  }
                   className="items-center flex-1"
                 >
                   <View
@@ -531,6 +543,21 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                   </View>
                   <View className="bg-blue-600 w-12 h-12 rounded-full items-center justify-center">
                     <Text className="text-white text-lg font-bold">{collection.items.length}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Completed but not signed - can still add items */}
+            {collection.status === "completed" && !collection.signature && collection.items.length > 0 && (
+              <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-3">
+                <View className="flex-row items-center">
+                  <Ionicons name="information-circle" size={24} color="#D97706" />
+                  <View className="flex-1 ml-3">
+                    <Text className="text-amber-900 font-semibold text-sm">Need to add more items?</Text>
+                    <Text className="text-amber-700 text-xs mt-1">
+                      You can still add items using the + button or click on &ldquo;Add Items&rdquo; in the progress bar above to go back.
+                    </Text>
                   </View>
                 </View>
               </View>
