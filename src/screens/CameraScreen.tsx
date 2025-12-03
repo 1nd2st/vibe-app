@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Pressable, TextInput, Modal, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, Pressable, TextInput, Modal, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import { useCollectionStore } from "../state/collectionStore";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
-import type { ItemPhoto } from "../types/collection";
+import type { ItemPhoto, CollectionItem } from "../types/collection";
 import { analyzeImageForDamage } from "../services/aiDamageDetection";
+import { addPhotoToCollectionItem, getCollectionItemByUuid } from "../database/db-collections";
 import * as FileSystem from "expo-file-system";
 
 type Props = {
@@ -32,6 +32,11 @@ export default function CameraScreen({ navigation, route }: Props) {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState<number | null>(null);
   const [noteText, setNoteText] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
+  const [item, setItem] = useState<CollectionItem | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const aiAutoDetect = useSettingsStore((s) => s.settings.aiAutoDetect);
+  const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -40,10 +45,19 @@ export default function CameraScreen({ navigation, route }: Props) {
     };
   }, []);
 
-  const item = useCollectionStore((s) => s.getItem(itemId || ""));
-  const updateItem = useCollectionStore((s) => s.updateItem);
-  const aiAutoDetect = useSettingsStore((s) => s.settings.aiAutoDetect);
-  const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
+  // Load item details from SQLite
+  useEffect(() => {
+    const loadItem = async () => {
+      if (!itemId) return;
+      try {
+        const itemData = await getCollectionItemByUuid(itemId);
+        setItem(itemData);
+      } catch (error) {
+        console.error("Failed to load item:", error);
+      }
+    };
+    loadItem();
+  }, [itemId]);
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;
@@ -175,17 +189,46 @@ export default function CameraScreen({ navigation, route }: Props) {
     setCurrentPhotoIndex(null);
   };
 
-  const handleFinish = () => {
-    if (itemId && photos.length > 0) {
-      updateItem(itemId, { photos });
+  const handleFinish = async () => {
+    if (!itemId || photos.length === 0) {
+      // Navigate back even if no photos
+      navigation.reset({
+        index: 0,
+        routes: [
+          { name: "CollectionDetail" as const, params: { collectionId } },
+        ],
+      });
+      return;
     }
-    // Navigate back to CollectionDetail, removing both Camera and AddItem from stack
-    navigation.reset({
-      index: 0,
-      routes: [
-        { name: "CollectionDetail" as const, params: { collectionId } },
-      ],
-    });
+
+    setIsSaving(true);
+    try {
+      // Save each photo to SQLite
+      for (const photo of photos) {
+        await addPhotoToCollectionItem(itemId, {
+          uri: photo.uri,
+          timestamp: photo.timestamp,
+          conditionNotes: photo.conditionNotes,
+          aiDetectedDamage: photo.aiDetectedDamage,
+          aiAnalyzed: photo.aiAnalyzed,
+          annotationData: photo.annotationData,
+          annotatedImageUri: photo.annotatedImageUri,
+        });
+      }
+
+      // Navigate back to CollectionDetail, removing both Camera and AddItem from stack
+      navigation.reset({
+        index: 0,
+        routes: [
+          { name: "CollectionDetail" as const, params: { collectionId } },
+        ],
+      });
+    } catch (error) {
+      console.error("Failed to save photos:", error);
+      Alert.alert("Error", "Failed to save photos. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -289,9 +332,19 @@ export default function CameraScreen({ navigation, route }: Props) {
               {photos.length > 0 ? (
                 <Pressable
                   onPress={handleFinish}
-                  className="bg-green-600 rounded-full px-6 py-3 active:bg-green-700"
+                  disabled={isSaving}
+                  className={`rounded-full px-6 py-3 ${
+                    isSaving ? "bg-green-500" : "bg-green-600 active:bg-green-700"
+                  }`}
                 >
-                  <Text className="text-white text-base font-semibold">Done ({photos.length})</Text>
+                  {isSaving ? (
+                    <View className="flex-row items-center">
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <Text className="text-white text-base font-semibold ml-2">Saving...</Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-base font-semibold">Done ({photos.length})</Text>
+                  )}
                 </Pressable>
               ) : (
                 <View />

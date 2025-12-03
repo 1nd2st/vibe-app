@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import type { ItemDimensions } from "../types/collection";
+import { getCollectionByUuid, addCollectionItem } from "../database/db-collections";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "AddItem">;
@@ -16,10 +16,25 @@ type Props = {
 export default function AddItemScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { collectionId } = route.params;
-  const addItem = useCollectionStore((s) => s.addItem);
-  const collection = useCollectionStore((s) =>
-    s.collections.find((c) => c.id === collectionId)
-  );
+  const [collection, setCollection] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load collection to verify it exists
+  useEffect(() => {
+    const loadCollection = async () => {
+      try {
+        const collectionData = await getCollectionByUuid(collectionId);
+        setCollection(collectionData);
+      } catch (error) {
+        console.error("Failed to load collection:", error);
+        Alert.alert("Error", "Failed to load collection");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadCollection();
+  }, [collectionId]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -35,8 +50,8 @@ export default function AddItemScreen({ navigation, route }: Props) {
   const [condition, setCondition] = useState<"Excellent" | "Good" | "Fair" | "Poor" | "Damaged">("Good");
   const [conditionNotes, setConditionNotes] = useState("");
 
-  const handleContinueToPhotos = () => {
-    if (!title.trim()) {
+  const handleContinueToPhotos = async () => {
+    if (!title.trim() || !collection) {
       return;
     }
 
@@ -49,19 +64,27 @@ export default function AddItemScreen({ navigation, route }: Props) {
       weightUnit: weight ? weightUnit : undefined,
     };
 
-    const itemId = addItem(collectionId, {
-      title: title.trim(),
-      description: description.trim(),
-      artistName: artistName.trim() || undefined,
-      dimensions,
-      estimatedValue: estimatedValue ? parseFloat(estimatedValue) : 0,
-      currency,
-      photos: [],
-      overallCondition: condition,
-      conditionNotes: conditionNotes.trim(),
-    });
+    setIsSaving(true);
+    try {
+      const itemUuid = await addCollectionItem(collectionId, {
+        title: title.trim(),
+        description: description.trim(),
+        artistName: artistName.trim() || undefined,
+        dimensions,
+        estimatedValue: estimatedValue ? parseFloat(estimatedValue) : 0,
+        currency,
+        overallCondition: condition,
+        conditionNotes: conditionNotes.trim(),
+        photos: [], // Photos will be added in Camera screen
+      });
 
-    navigation.navigate("Camera", { collectionId, itemId });
+      navigation.navigate("Camera", { collectionId, itemId: itemUuid });
+    } catch (error) {
+      console.error("Failed to add item:", error);
+      Alert.alert("Error", "Failed to add item to collection");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const canContinue = title.trim().length > 0;
@@ -302,12 +325,16 @@ export default function AddItemScreen({ navigation, route }: Props) {
       <View className="bg-white border-t border-gray-200 px-6 py-4" style={{ paddingBottom: insets.bottom + 16 }}>
         <Pressable
           onPress={handleContinueToPhotos}
-          disabled={!canContinue}
+          disabled={!canContinue || isSaving}
           className={`rounded-xl py-4 items-center ${
-            canContinue ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+            canContinue && !isSaving ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
           }`}
         >
-          <Text className="text-white text-lg font-semibold">Continue to Photos</Text>
+          {isSaving ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text className="text-white text-lg font-semibold">Continue to Photos</Text>
+          )}
         </Pressable>
       </View>
     </KeyboardAvoidingView>
