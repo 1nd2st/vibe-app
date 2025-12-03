@@ -23,11 +23,18 @@ import {
   updateLocation,
   disableLocation,
   getWarehouses,
+  getWarehouseById,
   type Location,
   type InventoryItem,
   type Warehouse,
 } from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
+import {
+  generateLocationLabel,
+  generateLocationLabelBatch,
+  type LocationLabelData,
+  type LabelSize,
+} from "../utils/zpl-generator";
 
 type Props = NativeStackScreenProps<HomeStackParamList, "BrowseLocations">;
 
@@ -48,6 +55,11 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [editLocationName, setEditLocationName] = useState("");
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printLocation, setPrintLocation] = useState<Location | null>(null);
+  const [printMode, setPrintMode] = useState<"single" | "with-children">("single");
+  const [labelSize, setLabelSize] = useState<LabelSize>("4x4");
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     loadLocations();
@@ -233,6 +245,95 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
     );
   };
 
+  // Recursively get all child locations
+  const getAllChildLocations = async (parentId: number): Promise<Location[]> => {
+    const children = await getLocations(parentId, true);
+    let allChildren: Location[] = [...children];
+
+    for (const child of children) {
+      const grandchildren = await getAllChildLocations(child.id);
+      allChildren = [...allChildren, ...grandchildren];
+    }
+
+    return allChildren;
+  };
+
+  // Count total locations for print preview
+  const countLocationsForPrint = async (location: Location, includeChildren: boolean): Promise<number> => {
+    if (!includeChildren) return 1;
+    const children = await getAllChildLocations(location.id);
+    return 1 + children.length; // parent + all children
+  };
+
+  // Handle print labels button press
+  const handlePrintLabels = async (location: Location) => {
+    setPrintLocation(location);
+    setPrintMode("single");
+    setShowPrintModal(true);
+  };
+
+  // Generate and "print" labels (preview mode for now)
+  const handleConfirmPrint = async () => {
+    if (!printLocation) return;
+
+    setIsPrinting(true);
+    try {
+      // Get warehouse info
+      const warehouse = printLocation.warehouse_id
+        ? await getWarehouseById(printLocation.warehouse_id)
+        : null;
+
+      // Collect all locations to print
+      let locationsToPrint: Location[] = [printLocation];
+      if (printMode === "with-children") {
+        const children = await getAllChildLocations(printLocation.id);
+        locationsToPrint = [printLocation, ...children];
+      }
+
+      // Convert to label data
+      const labelData: LocationLabelData[] = locationsToPrint.map((loc) => ({
+        locationCode: loc.location_code || loc.name,
+        locationName: loc.name,
+        fullPath: loc.full_path,
+        warehouseName: warehouse?.name,
+      }));
+
+      // Generate ZPL
+      const zpl = generateLocationLabelBatch(labelData, labelSize);
+
+      // For now, show preview/success
+      Alert.alert(
+        "Labels Generated",
+        `✓ Generated ${labelData.length} label${labelData.length > 1 ? "s" : ""}\n\n` +
+        `Size: ${labelSize}\n` +
+        `ZPL code generated successfully.\n\n` +
+        `To print:\n` +
+        `1. Configure printer in Settings\n` +
+        `2. ZPL will be sent to printer automatically\n\n` +
+        `(Printer integration coming soon)`,
+        [
+          {
+            text: "Copy ZPL",
+            onPress: () => {
+              // In a real implementation, copy to clipboard
+              console.log("ZPL Code:\n", zpl);
+              Alert.alert("Success", "ZPL copied to logs. Check console for ZPL code.");
+            },
+          },
+          { text: "Done", style: "default" },
+        ]
+      );
+
+      setShowPrintModal(false);
+      setPrintLocation(null);
+    } catch (error: any) {
+      console.error("Failed to generate labels:", error);
+      Alert.alert("Error", error.message || "Failed to generate labels");
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar style="dark" />
@@ -340,6 +441,19 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
                       <Text className="text-blue-900 text-center text-sm font-medium">
                         View Items
                       </Text>
+                    </Pressable>
+                  )}
+                  {user?.role === "admin" && location.location_code && (
+                    <Pressable
+                      onPress={() => handlePrintLabels(location)}
+                      className="flex-1 bg-purple-100 rounded-lg py-2 active:bg-purple-200"
+                    >
+                      <View className="flex-row items-center justify-center">
+                        <Ionicons name="print-outline" size={16} color="#7C3AED" />
+                        <Text className="text-purple-900 text-center text-sm font-medium ml-1">
+                          Labels
+                        </Text>
+                      </View>
                     </Pressable>
                   )}
                   {user?.role === "admin" && (
@@ -549,6 +663,163 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
               </View>
             )}
           </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Print Labels Modal */}
+      <Modal visible={showPrintModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView className="flex-1 bg-white">
+          <View className="px-6 py-4 border-b border-gray-200">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-gray-900">Print Location Labels</Text>
+              <Pressable onPress={() => setShowPrintModal(false)}>
+                <Ionicons name="close" size={28} color="#374151" />
+              </Pressable>
+            </View>
+          </View>
+
+          <ScrollView className="flex-1 px-6 py-6">
+            {printLocation && (
+              <>
+                {/* Location Info */}
+                <View className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+                  <Text className="text-sm font-medium text-purple-900 mb-1">
+                    {printLocation.name}
+                  </Text>
+                  <Text className="text-xs text-purple-700">
+                    Code: {printLocation.location_code || "N/A"}
+                  </Text>
+                  <Text className="text-xs text-purple-700 mt-1">
+                    Path: {printLocation.full_path}
+                  </Text>
+                </View>
+
+                {/* Print Mode Selection */}
+                <Text className="text-sm font-medium text-gray-700 mb-3">Print Options</Text>
+
+                <Pressable
+                  onPress={() => setPrintMode("single")}
+                  className={`flex-row items-center p-4 rounded-xl mb-3 border-2 ${
+                    printMode === "single"
+                      ? "bg-purple-50 border-purple-500"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <View
+                    className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                      printMode === "single" ? "border-purple-500" : "border-gray-300"
+                    }`}
+                  >
+                    {printMode === "single" && (
+                      <View className="w-3 h-3 rounded-full bg-purple-500" />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-semibold text-gray-900">
+                      This location only
+                    </Text>
+                    <Text className="text-sm text-gray-600 mt-1">Print 1 label</Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPrintMode("with-children")}
+                  className={`flex-row items-center p-4 rounded-xl mb-6 border-2 ${
+                    printMode === "with-children"
+                      ? "bg-purple-50 border-purple-500"
+                      : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <View
+                    className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                      printMode === "with-children" ? "border-purple-500" : "border-gray-300"
+                    }`}
+                  >
+                    {printMode === "with-children" && (
+                      <View className="w-3 h-3 rounded-full bg-purple-500" />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-semibold text-gray-900">
+                      Include all children
+                    </Text>
+                    <Text className="text-sm text-gray-600 mt-1">
+                      Print labels for this location and all sub-locations
+                    </Text>
+                  </View>
+                </Pressable>
+
+                {/* Label Size Selection */}
+                <Text className="text-sm font-medium text-gray-700 mb-3">Label Size</Text>
+                <View className="flex-row space-x-3 mb-6">
+                  <Pressable
+                    onPress={() => setLabelSize("4x4")}
+                    className={`flex-1 py-3 rounded-xl border-2 ${
+                      labelSize === "4x4"
+                        ? "bg-purple-50 border-purple-500"
+                        : "bg-gray-50 border-gray-200"
+                    }`}
+                  >
+                    <Text
+                      className={`text-center font-semibold ${
+                        labelSize === "4x4" ? "text-purple-900" : "text-gray-700"
+                      }`}
+                    >
+                      4&quot; × 4&quot;
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setLabelSize("4x6")}
+                    className={`flex-1 py-3 rounded-xl border-2 ${
+                      labelSize === "4x6"
+                        ? "bg-purple-50 border-purple-500"
+                        : "bg-gray-50 border-gray-200"
+                    }`}
+                  >
+                    <Text
+                      className={`text-center font-semibold ${
+                        labelSize === "4x6" ? "text-purple-900" : "text-gray-700"
+                      }`}
+                    >
+                      4&quot; × 6&quot;
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* Info Note */}
+                <View className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <View className="flex-row items-start">
+                    <Ionicons name="information-circle" size={20} color="#2563EB" />
+                    <Text className="text-sm text-blue-900 ml-2 flex-1">
+                      Each label includes a large QR code, location code, name, full path, and
+                      barcode for easy scanning.
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </ScrollView>
+
+          <View className="px-6 py-4 border-t border-gray-200">
+            <Pressable
+              onPress={handleConfirmPrint}
+              disabled={isPrinting}
+              className={`rounded-xl py-4 ${
+                isPrinting ? "bg-gray-400" : "bg-purple-600 active:bg-purple-700"
+              }`}
+            >
+              {isPrinting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <View className="flex-row items-center justify-center">
+                  <Ionicons name="print" size={20} color="white" />
+                  <Text className="text-white text-center font-semibold ml-2">
+                    Generate Labels
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

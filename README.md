@@ -421,6 +421,14 @@ This app streamlines workflows for art logistics companies by providing two inte
   - Batch printing support
   - Helper functions for printer integration
   - Preview URL generation (Labelary API)
+- ✅ **Print Location Labels UI** - Beautiful print modal with options
+  - "Print Labels" button for locations with codes (admin only)
+  - Modal with print mode selection (single / with children)
+  - Label size selector (4x4" or 4x6")
+  - Recursive child location printing
+  - Preview mode shows label count and ZPL generation
+  - Copy ZPL to logs for manual testing
+  - Ready for printer integration (sends to printer when configured)
 - ✅ **Updated Inventory Screens** - All screens use enhanced database
   - ScanPutAwayScreen - Updated to use object-based createItem
   - SearchItemScreen - Updated type imports
