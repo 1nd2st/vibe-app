@@ -278,9 +278,11 @@ export async function deleteCustomerLocation(
 export async function getAllCollections(): Promise<Collection[]> {
   const database = getDB();
   const rows = await database.getAllAsync<any>(
-    `SELECT * FROM Collection
-     WHERE deleted_at IS NULL
-     ORDER BY collection_date DESC, created_at DESC`
+    `SELECT c.*, cust.uuid as customer_uuid
+     FROM Collection c
+     LEFT JOIN Customer cust ON c.customer_id = cust.id
+     WHERE c.deleted_at IS NULL
+     ORDER BY c.collection_date DESC, c.created_at DESC`
   );
 
   const collections: Collection[] = [];
@@ -295,7 +297,10 @@ export async function getAllCollections(): Promise<Collection[]> {
 export async function getCollectionByUuid(uuid: string): Promise<Collection | null> {
   const database = getDB();
   const row = await database.getFirstAsync<any>(
-    "SELECT * FROM Collection WHERE uuid = ? AND deleted_at IS NULL",
+    `SELECT c.*, cust.uuid as customer_uuid
+     FROM Collection c
+     LEFT JOIN Customer cust ON c.customer_id = cust.id
+     WHERE c.uuid = ? AND c.deleted_at IS NULL`,
     [uuid]
   );
 
@@ -758,7 +763,7 @@ function mapRowToCollection(row: any, items: CollectionItem[]): Collection {
   const collection: Collection = {
     id: row.uuid,
     displayId: row.display_id,
-    customerId: "", // Will be fetched if needed
+    customerId: row.customer_uuid || "",
     customerName: row.customer_name,
     collectionDate: row.collection_date,
     status: row.status,

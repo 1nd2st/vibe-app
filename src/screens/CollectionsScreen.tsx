@@ -223,12 +223,6 @@ export default function CollectionsScreen({ navigation }: Props) {
             >
               <Ionicons name="qr-code-outline" size={24} color="#111827" />
             </Pressable>
-            <Pressable
-              onPress={() => navigation.navigate("Settings")}
-              className="w-10 h-10 items-center justify-center active:opacity-70"
-            >
-              <Ionicons name="settings-outline" size={24} color="#111827" />
-            </Pressable>
           </View>
         </View>
       </View>
@@ -367,7 +361,7 @@ export default function CollectionsScreen({ navigation }: Props) {
 
       {/* Floating Action Button */}
       <Pressable
-        onPress={() => navigation.navigate("NewCollection", {})}
+        onPress={() => navigation.navigate("Customers")}
         className="absolute bottom-8 right-6 bg-blue-600 rounded-full w-16 h-16 items-center justify-center shadow-lg active:bg-blue-700"
         style={{
           shadowColor: "#2563EB",

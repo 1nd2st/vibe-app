@@ -17,16 +17,41 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
-- ✅ **COMPREHENSIVE QA & FIXES** - Full app tested and all navigation working
+- ⚠️ **KNOWN ISSUE: CollectionDetailScreen Not Migrated** - Critical bug blocking collection creation
+  - CollectionDetailScreen still uses Zustand instead of SQLite
+  - After creating a collection, navigating to it shows "Collection not found"
+  - This screen needs full migration to SQLite (complex - has undo functionality, item management)
+  - **WORKAROUND**: Collections are created successfully in database, just can't view them yet
+- ✅ **FIXED: Customer Collections Count** - Customers now show correct collection counts
+  - Added LEFT JOIN with Customer table in getAllCollections query
+  - mapRowToCollection now correctly maps customer_uuid from JOIN result
+  - CustomersScreen now properly filters and displays collection counts per customer
+- ✅ **FIXED: Settings Icons Removed** - Removed duplicate settings access points
+  - Removed settings gear icon from CustomersScreen header
+  - Removed settings gear icon from CollectionsScreen header
+  - Only access to settings is through Home screen (one global entry point)
+- ✅ **IMPROVED: Settings Organization** - AI and Printer now separate sections
+  - Split "AI & Printer Settings" into two distinct menu items
+  - "AI Damage Detection" - Configure AI photo analysis
+  - "Zebra Printer Setup" - Configure network printer settings
+  - Both link to Settings screen with all configuration options
+- ✅ **FIXED: Collections Screen Navigation** - FAB now correctly navigates
+  - FAB (+) button now goes to Customers screen (not NewCollection)
+  - Proper flow: Collections → Customers → Pick Customer → NewCollection
+- ✅ **Search Items Functionality** - 10 sample items available for testing
+  - Items are in database (INV-2025-001 through INV-2025-010)
+  - User must enter search term and press Search button
+  - Search works by inventory number, title, description, or customer name
+  - All sample items have status "In storage" in Transit Room
+- ✅ **COMPREHENSIVE QA & FIXES** - Partial app tested with critical fixes applied
   - Fixed CustomerDetailScreen using Zustand instead of SQLite (now fully migrated)
   - Added loading states and error handling to customer edit/delete operations
   - Migration 6: Added 10 sample inventory items for testing search functionality
-  - All navigation links tested and working correctly
   - No TypeScript errors remaining
 - ✅ **UNIFIED SETTINGS PAGE** - One global settings hub for entire app
   - InventorySettings is now the main settings entry point for all users
-  - Links to AI & Printer Settings, User Management, Password Policy, Change Password
-  - Settings screen now accessible from both Collections and Inventory modules
+  - Links to AI Detection, Printer Setup, User Management, Password Policy, Change Password
+  - Settings screen now accessible only from Home screen (removed from Collections/Customers)
   - Consolidated navigation with proper type definitions
 - ✅ **FIXED: Collections Navigation Flow** - Corrected navigation to show Customers first
   - Collections button now navigates to Customers screen (not Collections list)
