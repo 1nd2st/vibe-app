@@ -37,6 +37,8 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showUndoToast, setShowUndoToast] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   if (!collection) {
     return (
@@ -91,6 +93,43 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const handleShareReport = async () => {
     setShowExportMenu(false);
     await shareCollectionReport(collection);
+  };
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) {
+      // Exiting selection mode
+      setSelectionMode(false);
+      setSelectedItems(new Set());
+    } else {
+      // Entering selection mode - select all items by default
+      setSelectionMode(true);
+      const allItemIds = new Set(collection.items.map(item => item.id));
+      setSelectedItems(allItemIds);
+    }
+  };
+
+  const handleToggleItemSelection = (itemId: string) => {
+    const newSelection = new Set(selectedItems);
+    if (newSelection.has(itemId)) {
+      newSelection.delete(itemId);
+    } else {
+      newSelection.add(itemId);
+    }
+    setSelectedItems(newSelection);
+  };
+
+  const handlePrintQRCodes = () => {
+    if (selectedItems.size === 0) {
+      Alert.alert("No Items Selected", "Please select at least one item to print QR codes.");
+      return;
+    }
+
+    navigation.navigate("QRCodeDisplay", {
+      collectionId,
+      itemIds: Array.from(selectedItems),
+    });
+    setSelectionMode(false);
+    setSelectedItems(new Set());
   };
 
   const handleDeleteItem = (itemId: string, itemTitle: string) => {
@@ -292,16 +331,41 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
         }
         renderItem={({ item }) => (
           <SwipeableItem
-            enabled={collection.status !== "signed"}
+            enabled={collection.status !== "signed" && !selectionMode}
             onDelete={() => handleDeleteItem(item.id, item.title)}
           >
             <ContextMenu.Root>
               <ContextMenu.Trigger>
                 <Pressable
-                  onPress={() => navigation.navigate("ItemDetail", { itemId: item.id, collectionId })}
-                  className="bg-white rounded-2xl p-4 mb-3 border border-gray-100 active:bg-gray-50"
+                  onPress={() => {
+                    if (selectionMode) {
+                      handleToggleItemSelection(item.id);
+                    } else {
+                      navigation.navigate("ItemDetail", { itemId: item.id, collectionId });
+                    }
+                  }}
+                  className={`bg-white rounded-2xl p-4 mb-3 border active:bg-gray-50 ${
+                    selectionMode && selectedItems.has(item.id)
+                      ? "border-blue-600 bg-blue-50"
+                      : "border-gray-100"
+                  }`}
                 >
                   <View className="flex-row">
+                    {selectionMode && (
+                      <View className="mr-3 items-center justify-center">
+                        <View
+                          className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+                            selectedItems.has(item.id)
+                              ? "bg-blue-600 border-blue-600"
+                              : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {selectedItems.has(item.id) && (
+                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          )}
+                        </View>
+                      </View>
+                    )}
                     {item.photos.length > 0 && (
                       <View className="w-20 h-20 bg-gray-100 rounded-xl mr-3 items-center justify-center">
                         <Ionicons name="image" size={32} color="#9CA3AF" />
@@ -346,7 +410,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                         </Text>
                       </View>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                    {!selectionMode && <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />}
                   </View>
                 </Pressable>
               </ContextMenu.Trigger>
@@ -513,11 +577,45 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
         }
       />
 
-      {/* Floating Add Item Button */}
-      {collection.status !== "signed" && (
-        <Pressable
-          onPress={() => navigation.navigate("AddItem", { collectionId })}
-          className="absolute bottom-8 right-6 bg-blue-600 rounded-full w-16 h-16 items-center justify-center shadow-lg active:bg-blue-700"
+      {/* Floating Action Buttons */}
+      {collection.status !== "signed" && !selectionMode && (
+        <>
+          <Pressable
+            onPress={() => navigation.navigate("AddItem", { collectionId })}
+            className="absolute bottom-8 right-6 bg-blue-600 rounded-full w-16 h-16 items-center justify-center shadow-lg active:bg-blue-700"
+            style={{
+              shadowColor: "#2563EB",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+          >
+            <Ionicons name="add" size={32} color="#FFFFFF" />
+          </Pressable>
+
+          {collection.items.length > 0 && (
+            <Pressable
+              onPress={handleToggleSelectionMode}
+              className="absolute bottom-8 right-24 bg-white border-2 border-blue-600 rounded-full w-16 h-16 items-center justify-center shadow-lg active:bg-blue-50"
+              style={{
+                shadowColor: "#2563EB",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+              }}
+            >
+              <Ionicons name="qr-code" size={28} color="#2563EB" />
+            </Pressable>
+          )}
+        </>
+      )}
+
+      {/* Selection Mode Actions */}
+      {selectionMode && (
+        <View
+          className="absolute bottom-8 left-6 right-6 bg-white rounded-2xl p-4 border-2 border-blue-600 shadow-lg"
           style={{
             shadowColor: "#2563EB",
             shadowOffset: { width: 0, height: 4 },
@@ -526,8 +624,30 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
             elevation: 8,
           }}
         >
-          <Ionicons name="add" size={32} color="#FFFFFF" />
-        </Pressable>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-base font-semibold text-gray-900">
+              {selectedItems.size} of {collection.items.length} selected
+            </Text>
+            <Pressable onPress={handleToggleSelectionMode} className="active:opacity-70">
+              <Text className="text-blue-600 font-medium">Cancel</Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            onPress={handlePrintQRCodes}
+            disabled={selectedItems.size === 0}
+            className={`rounded-xl py-3 items-center flex-row justify-center ${
+              selectedItems.size > 0
+                ? "bg-blue-600 active:bg-blue-700"
+                : "bg-gray-300"
+            }`}
+          >
+            <Ionicons name="qr-code" size={20} color="#FFFFFF" />
+            <Text className="text-white text-base font-semibold ml-2">
+              Print QR Codes ({selectedItems.size})
+            </Text>
+          </Pressable>
+        </View>
       )}
 
       {/* Export Menu Modal */}

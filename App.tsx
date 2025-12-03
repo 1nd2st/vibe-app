@@ -61,7 +61,7 @@ export default function App() {
             <Stack.Screen
               name="NewCollection"
               component={NewCollectionScreen}
-              options={{ presentation: "modal" }}
+              options={{ presentation: "card" }}
             />
             <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
             <Stack.Screen

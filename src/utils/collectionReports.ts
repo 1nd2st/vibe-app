@@ -43,7 +43,7 @@ export const generateCollectionHTML = async (collection: Collection): Promise<{ 
   const itemsWithBase64Photos = await Promise.all(
     collection.items.map(async (item) => {
       const photosBase64 = await Promise.all(
-        item.photos.slice(0, 4).map(async (photo) => {
+        item.photos.map(async (photo) => { // Remove .slice(0, 4) to include ALL photos
           try {
             // Use annotated image if available, otherwise use original
             const imageUri = photo.annotatedImageUri || photo.uri;
@@ -354,7 +354,6 @@ export const generateCollectionHTML = async (collection: Collection): Promise<{ 
                 ${photoObj.hasAnnotation ? `
                   <div class="annotation-badge">✏️ ${photoObj.annotationLabels && photoObj.annotationLabels.length > 0 ? photoObj.annotationLabels.join(", ") : "Annotated"}</div>
                 ` : ''}
-                ${photoIndex === 0 && item.photos.length > 4 ? `<div class="photo-count">+${item.photos.length - 4} more</div>` : ''}
               </div>
             `).join('')}
           </div>

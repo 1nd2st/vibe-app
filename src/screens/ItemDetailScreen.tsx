@@ -10,6 +10,7 @@ import { RootStackParamList } from "../navigation/RootNavigator";
 import { analyzeImageForDamage } from "../services/aiDamageDetection";
 import Breadcrumb from "../components/Breadcrumb";
 import ZoomableImage from "../components/ZoomableImage";
+import { shareItemZPL } from "../utils/zebraZPL";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ItemDetail">;
@@ -147,12 +148,20 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
               <Text className="text-sm text-gray-500">{item.id}</Text>
             </View>
           </View>
-          <Pressable
-            onPress={() => navigation.navigate("Customers")}
-            className="ml-2 active:opacity-70"
-          >
-            <Ionicons name="home-outline" size={24} color="#2563EB" />
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={() => shareItemZPL(item, collectionId)}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="barcode-outline" size={28} color="#2563EB" />
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate("Customers")}
+              className="w-10 h-10 items-center justify-center active:opacity-70"
+            >
+              <Ionicons name="home-outline" size={24} color="#2563EB" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
