@@ -413,6 +413,14 @@ This app streamlines workflows for art logistics companies by providing two inte
   - Favorite locations for quick access
   - Recently used locations automatically tracked
   - Smart location suggestions based on usage patterns
+  - **Quick Access UI in LocationPicker**:
+    - Shows top 5 most relevant locations at root level
+    - ⭐ Favorite locations (starred by user)
+    - 🕒 Recently/frequently used locations
+    - One-tap access to common destinations
+    - Toggle favorite with star button
+    - Collapsible section to reduce clutter
+    - Auto-tracks usage when locations are selected
 - ✅ **ZPL Label Generator** - Location label printing ready
   - Generate ZPL code for 4x4" or 4x6" labels
   - Large QR codes (2.5" - 3" for easy scanning)

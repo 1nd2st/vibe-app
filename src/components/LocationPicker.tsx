@@ -18,6 +18,8 @@ import {
   createLocation,
   getItemCountForLocation,
   getWarehouses,
+  getQuickAccessLocations,
+  toggleLocationFavorite,
   type Location,
   type Warehouse,
 } from "../database/db-enhanced";
@@ -47,14 +49,27 @@ export default function LocationPicker({
   const [newLocationCode, setNewLocationCode] = useState("");
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [quickAccessLocations, setQuickAccessLocations] = useState<(Location & { usage_count: number; is_favorite: boolean })[]>([]);
+  const [showQuickAccess, setShowQuickAccess] = useState(true);
 
   // Load locations and warehouses
   useEffect(() => {
     if (visible) {
       loadLocations();
       loadWarehouses();
+      loadQuickAccess();
     }
   }, [visible, currentParentId]);
+
+  const loadQuickAccess = async () => {
+    if (!user?.id) return;
+    try {
+      const quick = await getQuickAccessLocations(user.id, 5);
+      setQuickAccessLocations(quick);
+    } catch (error) {
+      console.error("Failed to load quick access:", error);
+    }
+  };
 
   const loadWarehouses = async () => {
     try {
@@ -116,6 +131,21 @@ export default function LocationPicker({
     const currentLocation = breadcrumb[breadcrumb.length - 1];
     onSelectLocation(currentLocation.id, currentLocation.full_path);
     handleClose();
+  };
+
+  const handleSelectQuickAccessLocation = (location: Location) => {
+    onSelectLocation(location.id, location.full_path);
+    handleClose();
+  };
+
+  const handleToggleFavorite = async (locationId: number, isFavorite: boolean) => {
+    if (!user?.id) return;
+    try {
+      await toggleLocationFavorite(user.id, locationId, !isFavorite);
+      loadQuickAccess();
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+    }
   };
 
   const handleAddLocation = async () => {
@@ -247,6 +277,82 @@ export default function LocationPicker({
 
         {/* Content */}
         <ScrollView className="flex-1 px-6 py-4">
+          {/* Quick Access Section */}
+          {currentParentId === null && quickAccessLocations.length > 0 && showQuickAccess && (
+            <View className="mb-6">
+              <View className="flex-row items-center justify-between mb-3">
+                <View className="flex-row items-center">
+                  <Ionicons name="flash" size={20} color="#7C3AED" />
+                  <Text className="text-base font-bold text-gray-900 ml-2">Quick Access</Text>
+                </View>
+                <Pressable onPress={() => setShowQuickAccess(false)}>
+                  <Ionicons name="chevron-up" size={20} color="#9CA3AF" />
+                </Pressable>
+              </View>
+              <View className="space-y-2">
+                {quickAccessLocations.map((location) => (
+                  <Pressable
+                    key={location.id}
+                    onPress={() => handleSelectQuickAccessLocation(location)}
+                    className="bg-purple-50 border border-purple-200 rounded-xl p-3 active:bg-purple-100"
+                  >
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-1 flex-row items-center">
+                        <Ionicons
+                          name={location.is_favorite ? "star" : "time-outline"}
+                          size={20}
+                          color={location.is_favorite ? "#F59E0B" : "#7C3AED"}
+                        />
+                        <View className="ml-3 flex-1">
+                          <Text className="text-sm font-semibold text-gray-900">
+                            {location.name}
+                          </Text>
+                          <Text className="text-xs text-gray-600 mt-1">
+                            {location.full_path}
+                          </Text>
+                          {!location.is_favorite && location.usage_count > 0 && (
+                            <Text className="text-xs text-purple-600 mt-1">
+                              Used {location.usage_count} times
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleToggleFavorite(location.id, location.is_favorite);
+                        }}
+                        className="ml-2 p-2"
+                      >
+                        <Ionicons
+                          name={location.is_favorite ? "star" : "star-outline"}
+                          size={24}
+                          color={location.is_favorite ? "#F59E0B" : "#9CA3AF"}
+                        />
+                      </Pressable>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+              <View className="border-b border-gray-200 mt-4 mb-4" />
+            </View>
+          )}
+
+          {currentParentId === null && quickAccessLocations.length > 0 && !showQuickAccess && (
+            <View className="mb-4">
+              <Pressable
+                onPress={() => setShowQuickAccess(true)}
+                className="flex-row items-center py-2"
+              >
+                <Ionicons name="flash" size={18} color="#7C3AED" />
+                <Text className="text-sm font-medium text-purple-600 ml-2">
+                  Show Quick Access ({quickAccessLocations.length})
+                </Text>
+                <Ionicons name="chevron-down" size={18} color="#7C3AED" />
+              </Pressable>
+            </View>
+          )}
+
           {isLoading ? (
             <View className="py-12">
               <ActivityIndicator size="large" color="#2563EB" />
