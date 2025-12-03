@@ -49,15 +49,9 @@ export function buildCollectionSummary(collection: Collection): CollectionSummar
       itemsWithNoPhotos++;
     }
 
-    // Sum value (convert to USD if needed)
+    // Sum value - NO currency conversion, just sum what's in the database
     if (item.estimatedValue != null && item.estimatedValue > 0) {
-      let valueInUSD = item.estimatedValue;
-      if (item.currency === "EUR") {
-        valueInUSD = item.estimatedValue * 1.1; // Approximate conversion
-      } else if (item.currency === "GBP") {
-        valueInUSD = item.estimatedValue * 1.25; // Approximate conversion
-      }
-      totalValue += valueInUSD;
+      totalValue += item.estimatedValue;
     } else {
       itemsMissingValue++;
     }
@@ -79,19 +73,17 @@ export function buildCollectionSummary(collection: Collection): CollectionSummar
     if (dims?.length != null && dims?.width != null && dims?.height != null &&
         dims.length > 0 && dims.width > 0 && dims.height > 0) {
 
-      // Convert to cm if needed
-      let lengthCm = dims.length;
-      let widthCm = dims.width;
-      let heightCm = dims.height;
+      let volumeCm3: number;
 
       if (dims.unit === "in") {
-        lengthCm = dims.length * 2.54;
-        widthCm = dims.width * 2.54;
-        heightCm = dims.height * 2.54;
+        // Calculate volume in in³ first, then convert to cm³
+        const volumeIn3 = dims.length * dims.width * dims.height;
+        volumeCm3 = volumeIn3 * 16.387064; // 1 in³ = 16.387064 cm³
+      } else {
+        // Dimensions are in cm
+        volumeCm3 = dims.length * dims.width * dims.height;
       }
 
-      // Calculate volume in cm³
-      const volumeCm3 = lengthCm * widthCm * heightCm;
       totalVolumeCm3 += volumeCm3;
     } else {
       itemsMissingDimensions++;
