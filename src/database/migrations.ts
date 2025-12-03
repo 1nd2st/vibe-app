@@ -500,12 +500,17 @@ export const MIGRATIONS: Migration[] = [
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         item_id INTEGER NOT NULL,
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-        action TEXT NOT NULL,
         user_id INTEGER,
         user_name TEXT,
-        old_location_path TEXT,
-        new_location_path TEXT,
+        action_type TEXT NOT NULL CHECK(action_type IN ('COLLECTED', 'MOVED', 'STATUS_CHANGE', 'PACKED', 'SHIPPED', 'DELIVERED', 'NOTE', 'PHOTO_ADDED', 'UPDATED')),
+        from_location_path TEXT,
+        to_location_path TEXT,
+        from_status TEXT,
+        to_status TEXT,
         notes TEXT,
+        device_id TEXT,
+        ip_address TEXT,
+        app_version TEXT,
         session_id TEXT,
         FOREIGN KEY (item_id) REFERENCES Item(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES User(id)
@@ -713,6 +718,42 @@ export const MIGRATIONS: Migration[] = [
         (8, 'ITEM-008', 'INV-2025-008', 'Silk Rug', 'Persian silk rug with intricate patterns', 'Unknown', 5, 'David Wilson', 'In storage', 2, 'Warehouse 1 / Transit Room', 200, 150, 1, 'cm', 12000, 'USD', 'Excellent', 1),
         (9, 'ITEM-009', 'INV-2025-009', 'Crystal Chandelier', 'Vintage Bohemian crystal chandelier', 'Unknown', 4, 'Emily Davis', 'In storage', 2, 'Warehouse 1 / Transit Room', 80, 80, 120, 'cm', 7500, 'USD', 'Good', 1),
         (10, 'ITEM-010', 'INV-2025-010', 'Wooden Cabinet', 'Antique mahogany display cabinet', 'Unknown', 5, 'David Wilson', 'In storage', 2, 'Warehouse 1 / Transit Room', 120, 50, 180, 'cm', 3000, 'USD', 'Fair', 1);
+    `,
+  },
+  {
+    version: 7,
+    name: "fix_itemhistory_schema",
+    up: `
+      -- Migration 7: Fix ItemHistory table schema
+      -- Previous migration had wrong column name (action instead of action_type)
+
+      -- Drop and recreate ItemHistory table with correct schema
+      DROP TABLE IF EXISTS ItemHistory;
+
+      CREATE TABLE ItemHistory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        user_id INTEGER,
+        user_name TEXT,
+        action_type TEXT NOT NULL CHECK(action_type IN ('COLLECTED', 'MOVED', 'STATUS_CHANGE', 'PACKED', 'SHIPPED', 'DELIVERED', 'NOTE', 'PHOTO_ADDED', 'UPDATED')),
+        from_location_path TEXT,
+        to_location_path TEXT,
+        from_status TEXT,
+        to_status TEXT,
+        notes TEXT,
+        device_id TEXT,
+        ip_address TEXT,
+        app_version TEXT,
+        session_id TEXT,
+        FOREIGN KEY (item_id) REFERENCES Item(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES User(id)
+      );
+
+      -- Recreate index
+      CREATE INDEX IF NOT EXISTS idx_history_item ON ItemHistory(item_id);
+      CREATE INDEX IF NOT EXISTS idx_history_timestamp ON ItemHistory(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_history_user ON ItemHistory(user_id);
     `,
   },
 ];

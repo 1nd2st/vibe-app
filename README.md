@@ -17,6 +17,19 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
+- ✅ **FIXED: ItemHistory Schema Bug** - Database migration corrected
+  - Fixed inconsistent column name in ItemHistory table (action → action_type)
+  - Migration 7 automatically repairs existing databases
+  - Collection workflow now works without errors
+  - Items can be added to collections successfully
+- ✅ **COMPLETE: Full SQLite Migration** - Single source of truth achieved
+  - All 7 screens migrated from Zustand to SQLite
+  - Removed collectionStore.ts and undoStore.ts (292 lines cleaned up)
+  - Enhanced addCollectionItem() to create both CollectionItem and Item records
+  - Auto-generates inventory numbers (INV-YYYYMM-00001 format)
+  - Auto-assigns to Transit Room location
+  - Records COLLECTED action in ItemHistory
+  - Full audit trail from collection through storage
 - ✅ **FIXED: Complete Collection Photo Workflow** - Photo capture and saving now works!
   - Migrated CameraScreen from Zustand to SQLite database
   - Photos are now properly saved to database when clicking "Done"
