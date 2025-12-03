@@ -437,6 +437,15 @@ This app streamlines workflows for art logistics companies by providing two inte
   - Preview mode shows label count and ZPL generation
   - Copy ZPL to logs for manual testing
   - Ready for printer integration (sends to printer when configured)
+- ✅ **Scan Location QR Codes** - Quick location selection via camera
+  - Purple QR code button in LocationPicker header
+  - Full-screen camera scanner with beautiful overlay
+  - Scans QR codes, Code 128, UPC, EAN barcodes
+  - Auto-selects location on successful scan
+  - Purple corner frames guide QR code alignment
+  - Permission handling for camera access
+  - Prevents duplicate scans with debouncing
+  - Error handling for invalid/missing location codes
 - ✅ **Updated Inventory Screens** - All screens use enhanced database
   - ScanPutAwayScreen - Updated to use object-based createItem
   - SearchItemScreen - Updated type imports

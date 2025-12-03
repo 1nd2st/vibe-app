@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import {
   getLocations,
   createLocation,
@@ -20,6 +21,7 @@ import {
   getWarehouses,
   getQuickAccessLocations,
   toggleLocationFavorite,
+  getLocationByCode,
   type Location,
   type Warehouse,
 } from "../database/db-enhanced";
@@ -51,6 +53,9 @@ export default function LocationPicker({
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [quickAccessLocations, setQuickAccessLocations] = useState<(Location & { usage_count: number; is_favorite: boolean })[]>([]);
   const [showQuickAccess, setShowQuickAccess] = useState(true);
+  const [showScanner, setShowScanner] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [isScanning, setIsScanning] = useState(true);
 
   // Load locations and warehouses
   useEffect(() => {
@@ -148,6 +153,51 @@ export default function LocationPicker({
     }
   };
 
+  const handleScanCode = (scannedData: string) => {
+    if (!isScanning) return;
+    setIsScanning(false);
+    setShowScanner(false);
+    handleCodeScanned(scannedData);
+    // Re-enable scanning after a delay
+    setTimeout(() => setIsScanning(true), 2000);
+  };
+
+  const handleOpenScanner = async () => {
+    if (!permission) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert("Permission Required", "Camera permission is required to scan QR codes.");
+        return;
+      }
+    } else if (!permission.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert("Permission Required", "Camera permission is required to scan QR codes.");
+        return;
+      }
+    }
+    setIsScanning(true);
+    setShowScanner(true);
+  };
+
+  const handleCodeScanned = async (code: string) => {
+    try {
+      const location = await getLocationByCode(code);
+      if (location) {
+        onSelectLocation(location.id, location.full_path);
+        handleClose();
+      } else {
+        Alert.alert(
+          "Location Not Found",
+          `No location found with code "${code}". Please check the code and try again.`
+        );
+      }
+    } catch (error) {
+      console.error("Failed to find location by code:", error);
+      Alert.alert("Error", "Failed to find location. Please try again.");
+    }
+  };
+
   const handleAddLocation = async () => {
     if (!newLocationName.trim()) {
       Alert.alert("Error", "Please enter a location name");
@@ -229,9 +279,14 @@ export default function LocationPicker({
             <Text className="text-2xl font-bold text-gray-900">
               Choose Location
             </Text>
-            <Pressable onPress={handleClose} className="p-2 -mr-2">
-              <Ionicons name="close" size={28} color="#374151" />
-            </Pressable>
+            <View className="flex-row items-center">
+              <Pressable onPress={handleOpenScanner} className="p-2 mr-2">
+                <Ionicons name="qr-code-outline" size={28} color="#7C3AED" />
+              </Pressable>
+              <Pressable onPress={handleClose} className="p-2 -mr-2">
+                <Ionicons name="close" size={28} color="#374151" />
+              </Pressable>
+            </View>
           </View>
 
           {/* Breadcrumb */}
@@ -534,6 +589,60 @@ export default function LocationPicker({
           </View>
         </Modal>
       </SafeAreaView>
+
+      {/* Scanner Modal */}
+      <Modal visible={showScanner} animationType="slide" presentationStyle="fullScreen">
+        <SafeAreaView className="flex-1 bg-black">
+          <StatusBar style="light" />
+
+          {/* Camera View */}
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ["qr", "code128", "ean13", "ean8", "upc_a", "upc_e"],
+            }}
+            onBarcodeScanned={({ data }) => {
+              if (data) {
+                handleScanCode(data);
+              }
+            }}
+          >
+            {/* Overlay */}
+            <View className="flex-1">
+              {/* Header */}
+              <View className="px-6 py-4">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-white text-xl font-bold">Scan Location QR Code</Text>
+                  <Pressable onPress={() => setShowScanner(false)} className="p-2">
+                    <Ionicons name="close" size={32} color="white" />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Center Frame */}
+              <View className="flex-1 items-center justify-center px-12">
+                <View className="w-full aspect-square border-4 border-white rounded-3xl" style={{ maxWidth: 300 }}>
+                  <View className="absolute top-0 left-0 w-12 h-12 border-t-8 border-l-8 border-purple-500 rounded-tl-2xl" />
+                  <View className="absolute top-0 right-0 w-12 h-12 border-t-8 border-r-8 border-purple-500 rounded-tr-2xl" />
+                  <View className="absolute bottom-0 left-0 w-12 h-12 border-b-8 border-l-8 border-purple-500 rounded-bl-2xl" />
+                  <View className="absolute bottom-0 right-0 w-12 h-12 border-b-8 border-r-8 border-purple-500 rounded-br-2xl" />
+                </View>
+              </View>
+
+              {/* Instructions */}
+              <View className="px-6 py-8 bg-black/50">
+                <Text className="text-white text-center text-base font-semibold mb-2">
+                  Align QR code within the frame
+                </Text>
+                <Text className="text-white/80 text-center text-sm">
+                  The location will be selected automatically once scanned
+                </Text>
+              </View>
+            </View>
+          </CameraView>
+        </SafeAreaView>
+      </Modal>
     </Modal>
   );
 }
