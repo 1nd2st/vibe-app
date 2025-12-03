@@ -37,14 +37,13 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const getLastUndo = useUndoStore((s) => s.getLastUndo);
   const removeLastUndo = useUndoStore((s) => s.removeLastUndo);
 
-  const printerSettings = useSettingsStore((s) => ({
-    enabled: s.settings.printerEnabled,
-    ip: s.settings.printerIp,
-    port: s.settings.printerPort,
-    width: s.settings.labelWidth,
-    height: s.settings.labelHeight,
-    dpi: s.settings.printerDpi,
-  }));
+  // Use individual selectors to avoid infinite loop from object creation
+  const printerEnabled = useSettingsStore((s) => s.settings.printerEnabled);
+  const printerIp = useSettingsStore((s) => s.settings.printerIp);
+  const printerPort = useSettingsStore((s) => s.settings.printerPort);
+  const labelWidth = useSettingsStore((s) => s.settings.labelWidth);
+  const labelHeight = useSettingsStore((s) => s.settings.labelHeight);
+  const printerDpi = useSettingsStore((s) => s.settings.printerDpi);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showUndoToast, setShowUndoToast] = useState(false);
@@ -150,7 +149,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    if (!printerSettings.enabled) {
+    if (!printerEnabled) {
       Alert.alert(
         "Printer Not Configured",
         "Please enable and configure the printer in Settings first.",
@@ -162,7 +161,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    if (!printerSettings.ip) {
+    if (!printerIp) {
       Alert.alert(
         "Printer IP Required",
         "Please configure the printer IP address in Settings.",
@@ -181,11 +180,11 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     const result = await printMultipleItemLabels(
       itemsToPrint,
       collectionId,
-      printerSettings.ip,
-      printerSettings.port,
-      printerSettings.width,
-      printerSettings.height,
-      printerSettings.dpi
+      printerIp,
+      printerPort,
+      labelWidth,
+      labelHeight,
+      printerDpi
     );
     setIsPrintingLabels(false);
 
