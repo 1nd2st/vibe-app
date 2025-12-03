@@ -1,0 +1,372 @@
+// Database migration system for version control
+import * as SQLite from "expo-sqlite";
+
+export interface Migration {
+  version: number;
+  name: string;
+  up: string; // SQL to apply migration
+  down?: string; // SQL to rollback (optional)
+}
+
+// Migration history
+export const MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    name: "initial_schema",
+    up: `
+      -- Schema version tracking
+      CREATE TABLE IF NOT EXISTS schema_version (
+        version INTEGER PRIMARY KEY,
+        applied_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Location table with code support
+      CREATE TABLE IF NOT EXISTS Location (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        parent_id INTEGER,
+        full_path TEXT NOT NULL,
+        code_part TEXT,
+        location_code TEXT UNIQUE,
+        level INTEGER DEFAULT 0,
+        warehouse_id INTEGER,
+        is_transit INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (parent_id) REFERENCES Location(id),
+        FOREIGN KEY (warehouse_id) REFERENCES Warehouse(id)
+      );
+
+      -- Warehouse table for multi-warehouse support
+      CREATE TABLE IF NOT EXISTS Warehouse (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT UNIQUE NOT NULL,
+        address TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- User table with enhanced security
+      CREATE TABLE IF NOT EXISTS User (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        role TEXT DEFAULT 'user' CHECK(role IN ('user', 'admin')),
+        must_change_password INTEGER DEFAULT 0,
+        password_changed_at TEXT,
+        last_login_at TEXT,
+        failed_login_attempts INTEGER DEFAULT 0,
+        locked_until TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- Item table (unified for Collection and Inventory)
+      CREATE TABLE IF NOT EXISTS Item (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        inventory_number TEXT UNIQUE NOT NULL,
+        title TEXT,
+        description TEXT,
+        artist_name TEXT,
+        customer_id INTEGER,
+        customer_name TEXT,
+        collection_id INTEGER,
+        status TEXT NOT NULL CHECK(status IN ('Collected', 'In transit', 'In storage', 'Packed', 'Shipped', 'Delivered', 'Cancelled')),
+        current_location_id INTEGER,
+        current_location_path TEXT,
+        dimensions_length REAL,
+        dimensions_width REAL,
+        dimensions_height REAL,
+        dimensions_unit TEXT,
+        estimated_value REAL,
+        currency TEXT,
+        overall_condition TEXT,
+        condition_notes TEXT,
+        notes TEXT,
+        is_archived INTEGER DEFAULT 0,
+        created_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (current_location_id) REFERENCES Location(id),
+        FOREIGN KEY (collection_id) REFERENCES Collection(id),
+        FOREIGN KEY (customer_id) REFERENCES Customer(id),
+        FOREIGN KEY (created_by) REFERENCES User(id)
+      );
+
+      -- Collection table
+      CREATE TABLE IF NOT EXISTS Collection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        display_id TEXT UNIQUE NOT NULL,
+        customer_id INTEGER,
+        customer_name TEXT,
+        collection_date TEXT,
+        status TEXT DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed', 'signed')),
+        pickup_address TEXT,
+        delivery_address TEXT,
+        employee_name TEXT,
+        notes TEXT,
+        total_value REAL,
+        signature_data TEXT,
+        signer_name TEXT,
+        signer_role TEXT,
+        signed_at TEXT,
+        created_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (customer_id) REFERENCES Customer(id),
+        FOREIGN KEY (created_by) REFERENCES User(id)
+      );
+
+      -- Customer table
+      CREATE TABLE IF NOT EXISTS Customer (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- ItemPhoto table
+      CREATE TABLE IF NOT EXISTS ItemPhoto (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        item_id INTEGER NOT NULL,
+        uri TEXT NOT NULL,
+        condition_notes TEXT,
+        ai_detected_damage TEXT,
+        ai_analyzed INTEGER DEFAULT 0,
+        annotation_data TEXT,
+        annotated_uri TEXT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (item_id) REFERENCES Item(id) ON DELETE CASCADE
+      );
+
+      -- ItemHistory table (append-only audit log)
+      CREATE TABLE IF NOT EXISTS ItemHistory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        user_id INTEGER,
+        user_name TEXT,
+        action_type TEXT NOT NULL CHECK(action_type IN ('COLLECTED', 'MOVED', 'STATUS_CHANGE', 'PACKED', 'SHIPPED', 'DELIVERED', 'NOTE', 'PHOTO_ADDED', 'UPDATED')),
+        from_location_path TEXT,
+        to_location_path TEXT,
+        from_status TEXT,
+        to_status TEXT,
+        notes TEXT,
+        device_id TEXT,
+        ip_address TEXT,
+        app_version TEXT,
+        session_id TEXT,
+        FOREIGN KEY (item_id) REFERENCES Item(id),
+        FOREIGN KEY (user_id) REFERENCES User(id)
+      );
+
+      -- UserLocationUsage table (for Quick Access)
+      CREATE TABLE IF NOT EXISTS UserLocationUsage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        location_id INTEGER NOT NULL,
+        usage_count INTEGER DEFAULT 1,
+        last_used_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        is_favorite INTEGER DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES User(id),
+        FOREIGN KEY (location_id) REFERENCES Location(id),
+        UNIQUE(user_id, location_id)
+      );
+
+      -- PasswordPolicy table
+      CREATE TABLE IF NOT EXISTS PasswordPolicy (
+        id INTEGER PRIMARY KEY CHECK(id = 1),
+        min_length INTEGER DEFAULT 8,
+        require_uppercase INTEGER DEFAULT 1,
+        require_lowercase INTEGER DEFAULT 1,
+        require_number INTEGER DEFAULT 1,
+        require_special_char INTEGER DEFAULT 0,
+        password_expiry_days INTEGER DEFAULT 90,
+        force_change_on_first_login INTEGER DEFAULT 1,
+        max_failed_attempts INTEGER DEFAULT 5,
+        lockout_duration_minutes INTEGER DEFAULT 30,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- ChangeLog table (audit critical actions)
+      CREATE TABLE IF NOT EXISTS ChangeLog (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER,
+        action TEXT NOT NULL,
+        user_id INTEGER,
+        user_name TEXT,
+        old_values TEXT,
+        new_values TEXT,
+        ip_address TEXT,
+        app_version TEXT,
+        session_id TEXT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES User(id)
+      );
+
+      -- LoginAttempt table (security tracking)
+      CREATE TABLE IF NOT EXISTS LoginAttempt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        success INTEGER NOT NULL,
+        ip_address TEXT,
+        device_id TEXT,
+        app_version TEXT,
+        error_message TEXT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Indexes for performance
+      CREATE INDEX IF NOT EXISTS idx_location_parent ON Location(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_location_warehouse ON Location(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_location_code ON Location(location_code);
+      CREATE INDEX IF NOT EXISTS idx_location_is_active ON Location(is_active);
+      CREATE INDEX IF NOT EXISTS idx_item_inventory_number ON Item(inventory_number);
+      CREATE INDEX IF NOT EXISTS idx_item_collection ON Item(collection_id);
+      CREATE INDEX IF NOT EXISTS idx_item_customer ON Item(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_item_location ON Item(current_location_id);
+      CREATE INDEX IF NOT EXISTS idx_item_status ON Item(status);
+      CREATE INDEX IF NOT EXISTS idx_item_archived ON Item(is_archived);
+      CREATE INDEX IF NOT EXISTS idx_history_item ON ItemHistory(item_id);
+      CREATE INDEX IF NOT EXISTS idx_history_timestamp ON ItemHistory(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_history_user ON ItemHistory(user_id);
+      CREATE INDEX IF NOT EXISTS idx_user_username ON User(username);
+      CREATE INDEX IF NOT EXISTS idx_collection_customer ON Collection(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_status ON Collection(status);
+      CREATE INDEX IF NOT EXISTS idx_photo_item ON ItemPhoto(item_id);
+      CREATE INDEX IF NOT EXISTS idx_usage_user ON UserLocationUsage(user_id);
+      CREATE INDEX IF NOT EXISTS idx_usage_location ON UserLocationUsage(location_id);
+      CREATE INDEX IF NOT EXISTS idx_changelog_entity ON ChangeLog(entity_type, entity_id);
+      CREATE INDEX IF NOT EXISTS idx_changelog_timestamp ON ChangeLog(timestamp DESC);
+    `,
+  },
+  {
+    version: 2,
+    name: "seed_initial_data",
+    up: `
+      -- Insert default password policy
+      INSERT OR IGNORE INTO PasswordPolicy (id, min_length, require_uppercase, require_number, require_special_char, force_change_on_first_login)
+      VALUES (1, 8, 1, 1, 0, 1);
+
+      -- Insert default warehouse
+      INSERT OR IGNORE INTO Warehouse (id, name, code, is_active)
+      VALUES (1, 'Warehouse 1', 'WH1', 1);
+
+      -- Insert default admin user (password: admin - will be hashed properly)
+      -- This is temporary and will be replaced with proper hashing
+      INSERT OR IGNORE INTO User (id, username, password_hash, password_salt, role, must_change_password)
+      VALUES (1, 'admin', 'temp_hash', 'temp_salt', 'admin', 0);
+
+      -- Insert Warehouse 1
+      INSERT OR IGNORE INTO Location (id, name, parent_id, full_path, code_part, location_code, level, warehouse_id, is_transit, is_active)
+      VALUES (1, 'Warehouse 1', NULL, 'Warehouse 1', 'WH1', 'WH1', 0, 1, 0, 1);
+
+      -- Insert Transit Room in Warehouse 1
+      INSERT OR IGNORE INTO Location (id, name, parent_id, full_path, code_part, location_code, level, warehouse_id, is_transit, is_active)
+      VALUES (2, 'Transit Room', 1, 'Warehouse 1 / Transit Room', 'T', 'WH1-T', 1, 1, 1, 1);
+    `,
+  },
+];
+
+// Get current schema version
+export async function getCurrentVersion(
+  db: SQLite.SQLiteDatabase
+): Promise<number> {
+  try {
+    const result = await db.getFirstAsync<{ version: number }>(
+      "SELECT MAX(version) as version FROM schema_version"
+    );
+    return result?.version || 0;
+  } catch (error) {
+    // Table doesn't exist yet
+    return 0;
+  }
+}
+
+// Run migrations
+export async function runMigrations(
+  db: SQLite.SQLiteDatabase
+): Promise<void> {
+  const currentVersion = await getCurrentVersion(db);
+  console.log(`📦 Current schema version: ${currentVersion}`);
+
+  const pendingMigrations = MIGRATIONS.filter((m) => m.version > currentVersion);
+
+  if (pendingMigrations.length === 0) {
+    console.log("✅ Database is up to date");
+    return;
+  }
+
+  console.log(`🔄 Running ${pendingMigrations.length} migrations...`);
+
+  for (const migration of pendingMigrations) {
+    try {
+      console.log(`  → Applying migration ${migration.version}: ${migration.name}`);
+      await db.execAsync(migration.up);
+      await db.runAsync(
+        "INSERT INTO schema_version (version) VALUES (?)",
+        [migration.version]
+      );
+      console.log(`  ✅ Migration ${migration.version} applied`);
+    } catch (error) {
+      console.error(`  ❌ Migration ${migration.version} failed:`, error);
+      throw error;
+    }
+  }
+
+  console.log("✅ All migrations completed successfully");
+}
+
+// Rollback to specific version (for development)
+export async function rollbackToVersion(
+  db: SQLite.SQLiteDatabase,
+  targetVersion: number
+): Promise<void> {
+  const currentVersion = await getCurrentVersion(db);
+
+  if (targetVersion >= currentVersion) {
+    console.log("Nothing to rollback");
+    return;
+  }
+
+  const migrationsToRollback = MIGRATIONS.filter(
+    (m) => m.version > targetVersion && m.version <= currentVersion
+  ).reverse();
+
+  for (const migration of migrationsToRollback) {
+    if (migration.down) {
+      console.log(`Rolling back migration ${migration.version}: ${migration.name}`);
+      await db.execAsync(migration.down);
+      await db.runAsync("DELETE FROM schema_version WHERE version = ?", [
+        migration.version,
+      ]);
+    } else {
+      throw new Error(
+        `Cannot rollback migration ${migration.version}: no down script`
+      );
+    }
+  }
+
+  console.log(`✅ Rolled back to version ${targetVersion}`);
+}
