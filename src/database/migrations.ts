@@ -20,6 +20,18 @@ export const MIGRATIONS: Migration[] = [
         applied_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Warehouse table for multi-warehouse support (must come before Location)
+      CREATE TABLE IF NOT EXISTS Warehouse (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT UNIQUE NOT NULL,
+        address TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
       -- Location table with code support
       CREATE TABLE IF NOT EXISTS Location (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,18 +49,6 @@ export const MIGRATIONS: Migration[] = [
         deleted_at TEXT,
         FOREIGN KEY (parent_id) REFERENCES Location(id),
         FOREIGN KEY (warehouse_id) REFERENCES Warehouse(id)
-      );
-
-      -- Warehouse table for multi-warehouse support
-      CREATE TABLE IF NOT EXISTS Warehouse (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        code TEXT UNIQUE NOT NULL,
-        address TEXT,
-        is_active INTEGER DEFAULT 1,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        deleted_at TEXT
       );
 
       -- User table with enhanced security
