@@ -5,6 +5,14 @@ A professional mobile application for art moving and logistics companies to docu
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
+- ✅ **Android Hardware Barcode Scanner Support** - Physical scanner integration
+  - Supports Android devices with built-in hardware scanners (Honeywell, Zebra, etc.)
+  - Physical scan button captures barcodes on Collections home screen
+  - Hidden TextInput automatically captures scanner output
+  - Handles UPC-style 12-digit barcodes (extracts last 12 digits)
+  - Modal popup displays scanned barcode immediately
+  - Ready for backend integration to look up items/collections
+  - Console logging for debugging scanner behavior
 - ✅ **Zebra Network Printing** - Direct label printing to Zebra printers
   - Configure printer IP and settings in Settings screen
   - Test label button prints with 5 DPI smaller frame for verification
