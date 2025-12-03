@@ -3,19 +3,14 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { Alert } from "react-native";
 import type { Collection } from "../types/collection";
+import { buildCollectionSummary, formatNumber, formatCurrency } from "./collectionSummary";
 
 /**
  * Generate HTML report with embedded images
  */
 export const generateCollectionHTML = async (collection: Collection): Promise<{ html: string; hasMissingFiles: boolean }> => {
-  const totalValue = collection.items.reduce((sum, item) => {
-    const valueInUSD = item.currency === "USD" ? item.estimatedValue :
-                       item.currency === "EUR" ? item.estimatedValue * 1.1 :
-                       item.estimatedValue * 1.25;
-    return sum + valueInUSD;
-  }, 0);
-
-  const totalPhotos = collection.items.reduce((sum, item) => sum + item.photos.length, 0);
+  // Calculate comprehensive summary
+  const summary = buildCollectionSummary(collection);
 
   // Convert signature to base64 if exists
   let signatureBase64 = "";
@@ -307,19 +302,21 @@ export const generateCollectionHTML = async (collection: Collection): Promise<{ 
   </div>
 
   <div class="section">
-    <h2 class="section-title">📊 Summary</h2>
+    <h2 class="section-title">📊 Collection Summary</h2>
+
+    <!-- Basic Totals -->
     <div class="summary-grid">
       <div class="summary-item">
-        <div class="summary-label">Items Collected</div>
-        <div class="summary-value">${collection.items.length}</div>
+        <div class="summary-label">Total Items</div>
+        <div class="summary-value">${summary.totalItems}</div>
       </div>
       <div class="summary-item">
         <div class="summary-label">Total Photos</div>
-        <div class="summary-value">${totalPhotos}</div>
+        <div class="summary-value">${summary.totalPhotos}</div>
       </div>
       <div class="summary-item">
         <div class="summary-label">Total Value</div>
-        <div class="summary-value">$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="summary-value">USD $${formatCurrency(summary.totalValue)}</div>
       </div>
       <div class="summary-item">
         <div class="summary-label">Status</div>
@@ -327,6 +324,36 @@ export const generateCollectionHTML = async (collection: Collection): Promise<{ 
       </div>
     </div>
 
+    <!-- Weight & Volume (if available) -->
+    ${summary.totalWeightKg > 0 || summary.totalVolumeFt3 > 0 ? `
+      <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        ${summary.totalWeightKg > 0 ? `
+          <div class="summary-item">
+            <div class="summary-label">Total Weight</div>
+            <div class="summary-value">${formatNumber(summary.totalWeightLb, 1)} lb / ${formatNumber(summary.totalWeightKg, 1)} kg</div>
+          </div>
+        ` : ''}
+        ${summary.totalVolumeFt3 > 0 ? `
+          <div class="summary-item">
+            <div class="summary-label">Total Volume</div>
+            <div class="summary-value">${formatNumber(summary.totalVolumeFt3, 2)} ft³ / ${formatNumber(summary.totalVolumeM3, 2)} m³</div>
+          </div>
+        ` : ''}
+      </div>
+    ` : ''}
+
+    <!-- Data Quality -->
+    <div style="margin-top: 20px; padding: 15px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px;">
+      <div style="font-weight: 600; color: #78350f; margin-bottom: 10px;">📋 Data Quality</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 14px; color: #92400e;">
+        <div>Items missing dimensions: <strong>${summary.itemsMissingDimensions}</strong></div>
+        <div>Items missing weight: <strong>${summary.itemsMissingWeight}</strong></div>
+        <div>Items with no photos: <strong>${summary.itemsWithNoPhotos}</strong></div>
+        <div>Items missing value: <strong>${summary.itemsMissingValue}</strong></div>
+      </div>
+    </div>
+
+    <!-- Pickup/Delivery Info -->
     <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
       <div style="margin-bottom: 10px;"><strong>📍 Pickup:</strong> ${collection.pickupAddress}</div>
       ${collection.deliveryAddress ? `<div><strong>📦 Delivery:</strong> ${collection.deliveryAddress}</div>` : ''}

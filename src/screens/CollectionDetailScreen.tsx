@@ -14,6 +14,7 @@ import SwipeableItem from "../components/SwipeableItem";
 import * as ContextMenu from "zeego/context-menu";
 import { getCollectionByUuid, updateCollection, deleteCollectionItem, getCustomerById } from "../database/db-collections";
 import type { Collection, CollectionItem, Customer } from "../types/collection";
+import { buildCollectionSummary, formatNumber, formatCurrency } from "../utils/collectionSummary";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "CollectionDetail">;
@@ -301,6 +302,81 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     if (stepNumber >= currentStep) return;
   };
 
+  // Calculate collection summary
+  const summary = buildCollectionSummary(collection);
+
+  // Render summary card
+  const renderSummaryCard = () => {
+    if (collection.items.length === 0) return null;
+
+    return (
+      <View className="bg-white rounded-2xl p-5 mb-4">
+        <Text className="text-xl font-bold text-gray-900 mb-4">Collection Summary</Text>
+
+        {/* Basic Totals */}
+        <View className="mb-4">
+          <View className="flex-row justify-between py-2 border-b border-gray-100">
+            <Text className="text-gray-600 text-base">Total items</Text>
+            <Text className="text-gray-900 font-semibold text-base">{summary.totalItems}</Text>
+          </View>
+          <View className="flex-row justify-between py-2 border-b border-gray-100">
+            <Text className="text-gray-600 text-base">Total photos</Text>
+            <Text className="text-gray-900 font-semibold text-base">{summary.totalPhotos}</Text>
+          </View>
+          <View className="flex-row justify-between py-2 border-b border-gray-100">
+            <Text className="text-gray-600 text-base">Total value</Text>
+            <Text className="text-gray-900 font-semibold text-base">USD ${formatCurrency(summary.totalValue)}</Text>
+          </View>
+        </View>
+
+        {/* Weight & Volume */}
+        {(summary.totalWeightKg > 0 || summary.totalVolumeFt3 > 0) && (
+          <View className="mb-4">
+            {summary.totalWeightKg > 0 && (
+              <View className="flex-row justify-between py-2 border-b border-gray-100">
+                <Text className="text-gray-600 text-base">Total weight</Text>
+                <Text className="text-gray-900 font-semibold text-base">
+                  {formatNumber(summary.totalWeightLb, 1)} lb / {formatNumber(summary.totalWeightKg, 1)} kg
+                </Text>
+              </View>
+            )}
+            {summary.totalVolumeFt3 > 0 && (
+              <View className="flex-row justify-between py-2 border-b border-gray-100">
+                <Text className="text-gray-600 text-base">Total volume</Text>
+                <Text className="text-gray-900 font-semibold text-base">
+                  {formatNumber(summary.totalVolumeFt3, 2)} ft³ / {formatNumber(summary.totalVolumeM3, 2)} m³
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Data Quality */}
+        <View className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <Text className="text-amber-900 font-semibold text-base mb-3">Data Quality</Text>
+          <View className="space-y-1">
+            <View className="flex-row justify-between py-1">
+              <Text className="text-amber-800 text-sm">Items missing dimensions</Text>
+              <Text className="text-amber-900 font-semibold text-sm">{summary.itemsMissingDimensions}</Text>
+            </View>
+            <View className="flex-row justify-between py-1">
+              <Text className="text-amber-800 text-sm">Items missing weight</Text>
+              <Text className="text-amber-900 font-semibold text-sm">{summary.itemsMissingWeight}</Text>
+            </View>
+            <View className="flex-row justify-between py-1">
+              <Text className="text-amber-800 text-sm">Items with no photos</Text>
+              <Text className="text-amber-900 font-semibold text-sm">{summary.itemsWithNoPhotos}</Text>
+            </View>
+            <View className="flex-row justify-between py-1">
+              <Text className="text-amber-800 text-sm">Items missing value</Text>
+              <Text className="text-amber-900 font-semibold text-sm">{summary.itemsMissingValue}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
       {/* Header */}
@@ -418,6 +494,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
         data={collection.items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}
+        ListHeaderComponent={renderSummaryCard}
         ListEmptyComponent={
           <View className="items-center justify-center py-20">
             <Ionicons name="images-outline" size={64} color="#D1D5DB" />
