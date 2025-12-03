@@ -1,36 +1,28 @@
 // Inventory Management menu screen
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeStackParamList } from "../navigation/HomeNavigator";
+import AppHeader from "../components/AppHeader";
 
 type Props = NativeStackScreenProps<HomeStackParamList, "InventoryMenu">;
 
 export default function InventoryMenuScreen({ navigation }: Props) {
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-6 py-4 bg-white border-b border-gray-200">
-        <View className="flex-row items-center">
-          <Pressable
-            onPress={() => navigation.goBack()}
-            className="mr-4 p-2 -ml-2"
-          >
-            <Ionicons name="arrow-back" size={24} color="#374151" />
-          </Pressable>
-          <Text className="text-2xl font-bold text-gray-900">
-            Inventory Management
-          </Text>
-        </View>
-      </View>
+      <AppHeader
+        title="Inventory Management"
+        onBackPress={() => navigation.navigate("Home")}
+      />
 
       {/* Menu Options */}
-      <View className="flex-1 justify-center px-6 pb-20">
+      <ScrollView className="flex-1" contentContainerClassName="px-6 py-6">
         <View className="space-y-4">
           {/* Scan & Put Away */}
           <Pressable
@@ -94,29 +86,8 @@ export default function InventoryMenuScreen({ navigation }: Props) {
               <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
             </View>
           </Pressable>
-
-          {/* Settings */}
-          <Pressable
-            onPress={() => navigation.navigate("InventorySettings")}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 active:bg-gray-50"
-          >
-            <View className="flex-row items-center">
-              <View className="bg-orange-100 rounded-full p-4 mr-4">
-                <Ionicons name="settings-outline" size={32} color="#EA580C" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-xl font-bold text-gray-900 mb-1">
-                  Settings
-                </Text>
-                <Text className="text-sm text-gray-600">
-                  Manage users, passwords, and printer settings
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
-            </View>
-          </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

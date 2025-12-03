@@ -1,12 +1,14 @@
 import React, { useState, useRef, useCallback } from "react";
 import { View, Text, FlatList, Pressable, TextInput, Modal, NativeSyntheticEvent, TextInputKeyPressEventData, ActivityIndicator, Alert } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { getAllCollections } from "../database/db-collections";
 import type { Collection } from "../types/collection";
+import AppHeader from "../components/AppHeader";
+import SectionMenu, { SectionMenuItem } from "../components/SectionMenu";
 
 type BufferedDigit = { time: number; digit: string };
 
@@ -19,7 +21,6 @@ type Props = {
 };
 
 export default function CollectionsScreen({ navigation }: Props) {
-  const insets = useSafeAreaInsets();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,25 +208,43 @@ export default function CollectionsScreen({ navigation }: Props) {
     }
   };
 
+  const sectionMenuItems: SectionMenuItem[] = [
+    {
+      key: "customers",
+      label: "Customers",
+      onPress: () => navigation.navigate("Customers"),
+    },
+    {
+      key: "collections",
+      label: "Collections",
+      onPress: () => {}, // Already on this screen
+    },
+  ];
+
   return (
-    <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+    <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
       {/* Header */}
-      <View className="bg-white px-6 py-4 border-b border-gray-200">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1">
-            <Text className="text-3xl font-bold text-gray-900 mb-1">Collections</Text>
-            <Text className="text-sm text-gray-500">Art logistics & condition reports</Text>
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Pressable
-              onPress={() => navigation.navigate("QRScanner")}
-              className="w-10 h-10 items-center justify-center active:opacity-70"
-            >
-              <Ionicons name="qr-code-outline" size={24} color="#111827" />
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      <AppHeader
+        title="Collection"
+        onBackPress={() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          } else {
+            (navigation as any).navigate("Home");
+          }
+        }}
+        rightButton={
+          <Pressable
+            onPress={() => navigation.navigate("QRScanner")}
+            className="p-2 active:opacity-70"
+          >
+            <Ionicons name="qr-code-outline" size={24} color="#374151" />
+          </Pressable>
+        }
+      />
+
+      {/* Section Menu */}
+      <SectionMenu items={sectionMenuItems} activeKey="collections" />
 
       {/* Search Bar */}
       <View className="bg-white px-6 py-3 border-b border-gray-200">
@@ -429,6 +448,6 @@ export default function CollectionsScreen({ navigation }: Props) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

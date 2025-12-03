@@ -79,6 +79,24 @@ export default function HomeScreen({ navigation }: Props) {
               </Text>
             </View>
           </Pressable>
+
+          {/* Settings Button */}
+          <Pressable
+            onPress={() => navigation.navigate("Settings")}
+            className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 active:bg-gray-50"
+          >
+            <View className="items-center">
+              <View className="bg-orange-100 rounded-full p-6 mb-4">
+                <Ionicons name="settings-outline" size={48} color="#EA580C" />
+              </View>
+              <Text className="text-2xl font-bold text-gray-900 mb-2">
+                Settings
+              </Text>
+              <Text className="text-sm text-gray-600 text-center">
+                Configure app settings and preferences
+              </Text>
+            </View>
+          </Pressable>
         </View>
       </View>
 
