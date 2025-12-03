@@ -667,6 +667,19 @@ export const MIGRATIONS: Migration[] = [
       -- Recreate default password policy
       INSERT OR IGNORE INTO PasswordPolicy (id, min_length, require_uppercase, require_lowercase, require_number, require_special_char, password_expiry_days)
       VALUES (1, 8, 1, 1, 1, 0, 0);
+
+      -- Recreate default admin user (password: admin - will be hashed properly by initializeAdminUser)
+      INSERT OR IGNORE INTO User (id, username, password_hash, password_salt, role, must_change_password)
+      VALUES (1, 'admin', 'temp_hash', 'temp_salt', 'admin', 0);
+    `,
+  },
+  {
+    version: 4,
+    name: "add_missing_admin_user",
+    up: `
+      -- Add admin user if missing (fixes issue where migration 3 dropped tables but didn't recreate admin)
+      INSERT OR IGNORE INTO User (id, username, password_hash, password_salt, role, must_change_password, is_active)
+      VALUES (1, 'admin', 'temp_hash', 'temp_salt', 'admin', 0, 1);
     `,
   },
 ];
