@@ -17,6 +17,17 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
+- ✅ **COMPREHENSIVE QA & FIXES** - Full app tested and all navigation working
+  - Fixed CustomerDetailScreen using Zustand instead of SQLite (now fully migrated)
+  - Added loading states and error handling to customer edit/delete operations
+  - Migration 6: Added 10 sample inventory items for testing search functionality
+  - All navigation links tested and working correctly
+  - No TypeScript errors remaining
+- ✅ **UNIFIED SETTINGS PAGE** - One global settings hub for entire app
+  - InventorySettings is now the main settings entry point for all users
+  - Links to AI & Printer Settings, User Management, Password Policy, Change Password
+  - Settings screen now accessible from both Collections and Inventory modules
+  - Consolidated navigation with proper type definitions
 - ✅ **FIXED: Collections Navigation Flow** - Corrected navigation to show Customers first
   - Collections button now navigates to Customers screen (not Collections list)
   - User picks a customer, then creates a collection for that customer

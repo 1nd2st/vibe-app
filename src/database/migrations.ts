@@ -696,6 +696,25 @@ export const MIGRATIONS: Migration[] = [
         (5, 'CUST-005', 'David Wilson', '+1-555-0105', 'dwilson@example.com', '654 Maple Drive, Phoenix, AZ 85001');
     `,
   },
+  {
+    version: 6,
+    name: "seed_sample_inventory_items",
+    up: `
+      -- Add sample inventory items so users can search and test inventory management
+      INSERT OR IGNORE INTO Item (id, uuid, inventory_number, title, description, artist_name, customer_id, customer_name, status, current_location_id, current_location_path, dimensions_length, dimensions_width, dimensions_height, dimensions_unit, estimated_value, currency, overall_condition, created_by)
+      VALUES
+        (1, 'ITEM-001', 'INV-2025-001', 'Abstract Composition', 'Large canvas painting with vibrant colors', 'Pablo Martinez', 1, 'John Smith', 'In storage', 2, 'Warehouse 1 / Transit Room', 120, 90, 5, 'cm', 5000, 'USD', 'Excellent', 1),
+        (2, 'ITEM-002', 'INV-2025-002', 'Bronze Sculpture', 'Contemporary bronze figure sculpture', 'Lisa Chen', 1, 'John Smith', 'In storage', 2, 'Warehouse 1 / Transit Room', 40, 30, 60, 'cm', 8500, 'USD', 'Good', 1),
+        (3, 'ITEM-003', 'INV-2025-003', 'Vintage Vase', 'Ming Dynasty ceramic vase', 'Unknown', 2, 'Sarah Johnson', 'In storage', 2, 'Warehouse 1 / Transit Room', 25, 25, 40, 'cm', 15000, 'USD', 'Fair', 1),
+        (4, 'ITEM-004', 'INV-2025-004', 'Modern Chair', 'Mid-century modern lounge chair', 'Charles Eames', 3, 'Michael Brown', 'In storage', 2, 'Warehouse 1 / Transit Room', 80, 80, 90, 'cm', 3500, 'USD', 'Excellent', 1),
+        (5, 'ITEM-005', 'INV-2025-005', 'Oil Portrait', 'Classical oil portrait painting', 'Jane Anderson', 2, 'Sarah Johnson', 'In storage', 2, 'Warehouse 1 / Transit Room', 60, 80, 4, 'cm', 6000, 'USD', 'Good', 1),
+        (6, 'ITEM-006', 'INV-2025-006', 'Marble Bust', 'Roman style marble bust sculpture', 'Unknown', 4, 'Emily Davis', 'In storage', 2, 'Warehouse 1 / Transit Room', 30, 30, 50, 'cm', 4500, 'USD', 'Excellent', 1),
+        (7, 'ITEM-007', 'INV-2025-007', 'Decorative Mirror', 'Antique gilded frame mirror', 'Unknown', 3, 'Michael Brown', 'In storage', 2, 'Warehouse 1 / Transit Room', 100, 150, 10, 'cm', 2500, 'USD', 'Good', 1),
+        (8, 'ITEM-008', 'INV-2025-008', 'Silk Rug', 'Persian silk rug with intricate patterns', 'Unknown', 5, 'David Wilson', 'In storage', 2, 'Warehouse 1 / Transit Room', 200, 150, 1, 'cm', 12000, 'USD', 'Excellent', 1),
+        (9, 'ITEM-009', 'INV-2025-009', 'Crystal Chandelier', 'Vintage Bohemian crystal chandelier', 'Unknown', 4, 'Emily Davis', 'In storage', 2, 'Warehouse 1 / Transit Room', 80, 80, 120, 'cm', 7500, 'USD', 'Good', 1),
+        (10, 'ITEM-010', 'INV-2025-010', 'Wooden Cabinet', 'Antique mahogany display cabinet', 'Unknown', 5, 'David Wilson', 'In storage', 2, 'Warehouse 1 / Transit Room', 120, 50, 180, 'cm', 3000, 'USD', 'Fair', 1);
+    `,
+  },
 ];
 
 // Get current schema version

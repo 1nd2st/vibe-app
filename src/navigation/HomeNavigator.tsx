@@ -4,6 +4,7 @@ export type HomeStackParamList = {
   Home: undefined;
   Customers: undefined;
   Collections: undefined;
+  Settings: undefined;
   InventoryMenu: undefined;
   ScanPutAway: undefined;
   SearchItem: undefined;

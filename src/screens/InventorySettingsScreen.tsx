@@ -131,30 +131,31 @@ export default function InventorySettingsScreen({ navigation }: Props) {
           </View>
         </View>
 
-        {/* Printer Section (Coming Soon) */}
+        {/* App Configuration */}
         <View className="mb-6">
           <Text className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Printer Settings
+            App Configuration
           </Text>
 
-          <View className="bg-white rounded-xl p-4 border border-gray-200 opacity-60">
+          <Pressable
+            onPress={() => navigation.navigate("Settings")}
+            className="bg-white rounded-xl p-4 border border-gray-200 mb-3 active:bg-gray-50"
+          >
             <View className="flex-row items-center">
-              <View className="bg-orange-100 rounded-full p-3 mr-4">
-                <Ionicons name="print-outline" size={24} color="#EA580C" />
+              <View className="bg-purple-100 rounded-full p-3 mr-4">
+                <Ionicons name="sparkles-outline" size={24} color="#7C3AED" />
               </View>
               <View className="flex-1">
                 <Text className="text-base font-semibold text-gray-900">
-                  Zebra Printer Setup
+                  AI & Printer Settings
                 </Text>
                 <Text className="text-sm text-gray-600 mt-1">
-                  Configure IP, port, and label settings
-                </Text>
-                <Text className="text-xs text-orange-600 mt-1">
-                  Coming soon
+                  Configure AI damage detection and Zebra printer
                 </Text>
               </View>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
             </View>
-          </View>
+          </Pressable>
         </View>
 
         {/* App Info */}

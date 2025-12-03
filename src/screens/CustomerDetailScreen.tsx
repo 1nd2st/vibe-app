@@ -1,11 +1,13 @@
-import React, { useState } from "react";
-import { View, Text, FlatList, Pressable, Alert, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform } from "react-native";
-import { useCollectionStore } from "../state/collectionStore";
+import React, { useState, useEffect } from "react";
+import { View, Text, FlatList, Pressable, Alert, Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { getCustomerById, getAllCollections, updateCustomer, deleteCustomer } from "../database/db-collections";
+import type { Customer, Collection } from "../types/collection";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "CustomerDetail">;
@@ -16,42 +18,77 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { customerId } = route.params;
 
-  const customers = useCollectionStore((s) => s.customers);
-  const allCollections = useCollectionStore((s) => s.collections);
-  const updateCustomer = useCollectionStore((s) => s.updateCustomer);
-  const deleteCustomer = useCollectionStore((s) => s.deleteCustomer);
-
-  const customer = customers.find((c) => c.id === customerId);
-  const collections = allCollections.filter((c) => c.customerId === customerId);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [showEditModal, setShowEditModal] = useState(false);
-  const [customerName, setCustomerName] = useState(customer?.name || "");
-  const [customerPhone, setCustomerPhone] = useState(customer?.phone || "");
-  const [customerEmail, setCustomerEmail] = useState(customer?.email || "");
-  const [customerAddress, setCustomerAddress] = useState(customer?.address || "");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+
+  // Load customer and collections
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [customerData, allCollections] = await Promise.all([
+          getCustomerById(customerId),
+          getAllCollections(),
+        ]);
+
+        setCustomer(customerData);
+        if (customerData) {
+          const customerCollections = allCollections.filter((c) => c.customerId === customerData.id);
+          setCollections(customerCollections);
+        }
+      } catch (error) {
+        console.error("Failed to load customer:", error);
+        Alert.alert("Error", "Failed to load customer");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [customerId]);
 
   const handleEdit = () => {
-    setCustomerName(customer?.name || "");
-    setCustomerPhone(customer?.phone || "");
-    setCustomerEmail(customer?.email || "");
-    setCustomerAddress(customer?.address || "");
+    if (!customer) return;
+    setCustomerName(customer.name || "");
+    setCustomerPhone(customer.phone || "");
+    setCustomerEmail(customer.email || "");
+    setCustomerAddress(customer.address || "");
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!customerName.trim()) return;
 
-    updateCustomer(customerId, {
-      name: customerName.trim(),
-      phone: customerPhone.trim(),
-      email: customerEmail.trim(),
-      address: customerAddress.trim(),
-    });
+    setIsSaving(true);
+    try {
+      await updateCustomer(customerId, {
+        name: customerName.trim(),
+        phone: customerPhone.trim(),
+        email: customerEmail.trim(),
+        address: customerAddress.trim(),
+      });
 
-    setShowEditModal(false);
+      // Reload customer data
+      const updatedCustomer = await getCustomerById(customerId);
+      setCustomer(updatedCustomer);
+      setShowEditModal(false);
+    } catch (error) {
+      console.error("Failed to update customer:", error);
+      Alert.alert("Error", "Failed to update customer");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (collections.length > 0) {
       Alert.alert(
         "Cannot Delete Customer",
@@ -69,18 +106,31 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            deleteCustomer(customerId);
-            navigation.navigate("Customers");
+          onPress: async () => {
+            try {
+              await deleteCustomer(customerId);
+              navigation.navigate("Customers");
+            } catch (error) {
+              console.error("Failed to delete customer:", error);
+              Alert.alert("Error", "Failed to delete customer");
+            }
           },
         },
       ]
     );
   };
 
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50" style={{ paddingTop: insets.top }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
   if (!customer) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View className="flex-1 items-center justify-center bg-gray-50" style={{ paddingTop: insets.top }}>
         <Ionicons name="alert-circle-outline" size={64} color="#DC2626" />
         <Text className="text-gray-900 text-lg font-semibold mt-4">Customer not found</Text>
         <Pressable onPress={() => navigation.goBack()} className="mt-4">
@@ -345,12 +395,16 @@ export default function CustomerDetailScreen({ navigation, route }: Props) {
           >
             <Pressable
               onPress={handleSaveEdit}
-              disabled={!customerName.trim()}
+              disabled={!customerName.trim() || isSaving}
               className={`rounded-xl py-4 items-center ${
-                customerName.trim() ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
+                customerName.trim() && !isSaving ? "bg-blue-600 active:bg-blue-700" : "bg-gray-300"
               }`}
             >
-              <Text className="text-white text-lg font-semibold">Save Changes</Text>
+              {isSaving ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="text-white text-lg font-semibold">Save Changes</Text>
+              )}
             </Pressable>
           </View>
         </KeyboardAvoidingView>
