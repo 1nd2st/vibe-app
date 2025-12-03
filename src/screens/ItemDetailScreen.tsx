@@ -261,13 +261,13 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                     }}
                     onLongPress={() => {
                       if (!selectionMode) {
-                        setZoomImageUri(photo.uri);
+                        setZoomImageUri(photo.annotatedImageUri || photo.uri);
                       }
                     }}
                     className="relative"
                   >
                     <Image
-                      source={{ uri: photo.uri }}
+                      source={{ uri: photo.annotatedImageUri || photo.uri }}
                       style={{ width: 100, height: 100 }}
                       className="rounded-xl"
                     />
@@ -473,6 +473,16 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             </View>
           </View>
 
+          {/* Lock Banner */}
+          {(collection?.status === "completed" || collection?.status === "signed") && (
+            <View className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex-row items-center">
+              <Ionicons name="lock-closed" size={18} color="#D97706" />
+              <Text className="text-amber-800 text-sm font-medium ml-2 flex-1">
+                This collection is locked - photos cannot be edited
+              </Text>
+            </View>
+          )}
+
           {/* Scrollable Content */}
           <ScrollView
             className="flex-1"
@@ -482,7 +492,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             {selectedPhotoIndex !== null && (
               <View className="mb-6">
                 <Image
-                  source={{ uri: item.photos[selectedPhotoIndex].uri }}
+                  source={{ uri: item.photos[selectedPhotoIndex].annotatedImageUri || item.photos[selectedPhotoIndex].uri }}
                   style={{ width: "100%", height: 300 }}
                   className="rounded-2xl mb-3"
                   resizeMode="contain"
@@ -508,13 +518,15 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
                   });
                 }
               }}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || collection?.status === "completed" || collection?.status === "signed"}
               className={`flex-row items-center justify-center bg-orange-600 rounded-xl py-4 mb-4 ${
-                isAnalyzing ? "opacity-50" : "active:bg-orange-700"
+                isAnalyzing || collection?.status === "completed" || collection?.status === "signed" ? "opacity-50" : "active:bg-orange-700"
               }`}
             >
               <Ionicons name="brush" size={20} color="#FFFFFF" />
-              <Text className="text-white text-lg font-semibold ml-2">Annotate Photo</Text>
+              <Text className="text-white text-lg font-semibold ml-2">
+                {collection?.status === "completed" || collection?.status === "signed" ? "Locked - Cannot Annotate" : "Annotate Photo"}
+              </Text>
             </Pressable>
 
             {aiEnabled && (
@@ -553,7 +565,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
               numberOfLines={10}
               textAlignVertical="top"
               style={{ minHeight: 200 }}
-              editable={!isAnalyzing}
+              editable={!isAnalyzing && collection?.status !== "completed" && collection?.status !== "signed"}
               maxLength={1000}
             />
             <Text className="text-sm text-gray-400 text-right mb-6">
@@ -568,12 +580,14 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
           >
             <Pressable
               onPress={saveNote}
-              disabled={isAnalyzing}
+              disabled={isAnalyzing || collection?.status === "completed" || collection?.status === "signed"}
               className={`rounded-xl py-4 items-center ${
-                isAnalyzing ? "bg-gray-300" : "bg-blue-600 active:bg-blue-700"
+                isAnalyzing || collection?.status === "completed" || collection?.status === "signed" ? "bg-gray-300" : "bg-blue-600 active:bg-blue-700"
               }`}
             >
-              <Text className="text-white text-lg font-semibold">Save Note</Text>
+              <Text className="text-white text-lg font-semibold">
+                {collection?.status === "completed" || collection?.status === "signed" ? "Locked" : "Save Note"}
+              </Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>
