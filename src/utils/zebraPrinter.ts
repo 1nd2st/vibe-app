@@ -16,44 +16,65 @@ export const printZPLToNetwork = async (
   printerPort: number = 9100
 ): Promise<boolean> => {
   try {
-    // Try HTTP POST to printer
-    const response = await fetch(`http://${printerIp}:${printerPort}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain",
-      },
-      body: zplCode,
-    });
+    // Create abort controller with 10 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    // Check for successful response
-    if (response.ok || response.status === 204) {
-      return true;
+    try {
+      // Try HTTP POST to printer
+      const response = await fetch(`http://${printerIp}:${printerPort}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+        },
+        body: zplCode,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // Check for successful response
+      if (response.ok || response.status === 204) {
+        return true;
+      }
+
+      // Handle specific error codes
+      if (response.status === 401) {
+        Alert.alert(
+          "Printer Authentication Required",
+          `The printer at ${printerIp}:${printerPort} requires authentication.\n\nPlease check:\n• Printer web interface settings\n• Try port 80 instead of ${printerPort}\n• Printer may require login credentials`
+        );
+        return false;
+      }
+
+      if (response.status === 404) {
+        Alert.alert(
+          "Printer Not Found",
+          `No printer web interface found at ${printerIp}:${printerPort}.\n\nFor raw ZPL printing:\n• Try port 80 for web interface\n• Port 9100 requires raw TCP (not HTTP)\n• Check printer supports network printing`
+        );
+        return false;
+      }
+
+      throw new Error(`Printer responded with status: ${response.status}`);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+
+      // Handle timeout specifically
+      if (fetchError.name === 'AbortError') {
+        Alert.alert(
+          "Connection Timeout",
+          `Could not reach printer at ${printerIp}:${printerPort} (timed out after 10 seconds).\n\nPlease check:\n• Printer IP address is correct\n• Printer is powered on\n• Device is on same network as printer\n• Printer port is correct (try 80 or 9100)`
+        );
+        return false;
+      }
+
+      throw fetchError;
     }
-
-    // Handle specific error codes
-    if (response.status === 401) {
-      Alert.alert(
-        "Printer Authentication Required",
-        `The printer at ${printerIp}:${printerPort} requires authentication.\n\nPlease check:\n• Printer web interface settings\n• Try port 80 instead of ${printerPort}\n• Printer may require login credentials`
-      );
-      return false;
-    }
-
-    if (response.status === 404) {
-      Alert.alert(
-        "Printer Not Found",
-        `No printer web interface found at ${printerIp}:${printerPort}.\n\nFor raw ZPL printing:\n• Try port 80 for web interface\n• Port 9100 requires raw TCP (not HTTP)\n• Check printer supports network printing`
-      );
-      return false;
-    }
-
-    throw new Error(`Printer responded with status: ${response.status}`);
   } catch (error: any) {
-    // Don't show alert here, let calling function handle it
     console.error("Failed to print to network printer:", error);
 
-    // Only show alert if we haven't already shown a specific one
-    if (!error.message?.includes("Printer")) {
+    // Only show generic alert if we haven't already shown a specific one
+    if (!error.message?.includes("Printer") && error.name !== 'AbortError') {
       Alert.alert(
         "Print Failed",
         `Could not connect to printer at ${printerIp}:${printerPort}.\n\nTroubleshooting:\n• Verify printer IP address\n• Try port 80 (web interface)\n• Check device is on same network\n• Printer must be powered on\n\nError: ${error.message || "Network error"}`
