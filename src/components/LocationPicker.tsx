@@ -17,8 +17,10 @@ import {
   getLocations,
   createLocation,
   getItemCountForLocation,
-  Location,
-} from "../database/db";
+  getWarehouses,
+  type Location,
+  type Warehouse,
+} from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
 
 interface LocationPickerProps {
@@ -42,13 +44,29 @@ export default function LocationPicker({
   const [isLoading, setIsLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationCode, setNewLocationCode] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
 
-  // Load locations
+  // Load locations and warehouses
   useEffect(() => {
     if (visible) {
       loadLocations();
+      loadWarehouses();
     }
   }, [visible, currentParentId]);
+
+  const loadWarehouses = async () => {
+    try {
+      const wh = await getWarehouses();
+      setWarehouses(wh);
+      if (wh.length > 0 && !selectedWarehouseId) {
+        setSelectedWarehouseId(wh[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to load warehouses:", error);
+    }
+  };
 
   const loadLocations = async () => {
     setIsLoading(true);
@@ -106,6 +124,11 @@ export default function LocationPicker({
       return;
     }
 
+    if (!newLocationCode.trim()) {
+      Alert.alert("Error", "Please enter a location code");
+      return;
+    }
+
     if (!user) {
       Alert.alert("Error", "You must be logged in to create locations");
       return;
@@ -117,15 +140,42 @@ export default function LocationPicker({
       return;
     }
 
+    // Determine warehouse ID
+    let warehouseId = selectedWarehouseId;
+    if (currentParentId !== null) {
+      // Get warehouse from parent location
+      const parentLocation = breadcrumb[breadcrumb.length - 1];
+      if (parentLocation?.warehouse_id) {
+        warehouseId = parentLocation.warehouse_id;
+      }
+    }
+
+    if (!warehouseId) {
+      Alert.alert("Error", "Please select a warehouse");
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert("Error", "User ID not found");
+      return;
+    }
+
     try {
-      await createLocation(newLocationName.trim(), currentParentId);
+      await createLocation(
+        newLocationName.trim(),
+        newLocationCode.trim(),
+        currentParentId,
+        warehouseId,
+        user.id
+      );
       setNewLocationName("");
+      setNewLocationCode("");
       setShowAddModal(false);
       loadLocations();
       Alert.alert("Success", "Location created successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create location:", error);
-      Alert.alert("Error", "Failed to create location");
+      Alert.alert("Error", error.message || "Failed to create location");
     }
   };
 
@@ -133,6 +183,7 @@ export default function LocationPicker({
     setBreadcrumb([]);
     setCurrentParentId(null);
     setNewLocationName("");
+    setNewLocationCode("");
     setShowAddModal(false);
     onClose();
   };
@@ -314,6 +365,43 @@ export default function LocationPicker({
                 className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
                 autoFocus
               />
+
+              <Text className="text-sm text-gray-600 mb-2">
+                Location Code
+              </Text>
+              <TextInput
+                value={newLocationCode}
+                onChangeText={(text) => setNewLocationCode(text.toUpperCase())}
+                placeholder="e.g., R1, SA, B5"
+                placeholderTextColor="#9CA3AF"
+                className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                autoCapitalize="characters"
+              />
+
+              {currentParentId === null && warehouses.length > 0 && (
+                <>
+                  <Text className="text-sm text-gray-600 mb-2">Warehouse</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-4">
+                    {warehouses.map((warehouse) => (
+                      <Pressable
+                        key={warehouse.id}
+                        onPress={() => setSelectedWarehouseId(warehouse.id)}
+                        className={`px-4 py-2 rounded-full mr-2 ${
+                          selectedWarehouseId === warehouse.id ? "bg-blue-600" : "bg-gray-100"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm font-medium ${
+                            selectedWarehouseId === warehouse.id ? "text-white" : "text-gray-700"
+                          }`}
+                        >
+                          {warehouse.name}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </>
+              )}
 
               <View className="flex-row space-x-3">
                 <Pressable

@@ -22,9 +22,11 @@ import {
   createLocation,
   updateLocation,
   disableLocation,
-  Location,
-  InventoryItem,
-} from "../database/db";
+  getWarehouses,
+  type Location,
+  type InventoryItem,
+  type Warehouse,
+} from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
 
 type Props = NativeStackScreenProps<HomeStackParamList, "BrowseLocations">;
@@ -42,11 +44,27 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [locationItems, setLocationItems] = useState<InventoryItem[]>([]);
   const [newLocationName, setNewLocationName] = useState("");
+  const [newLocationCode, setNewLocationCode] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<number | null>(null);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [editLocationName, setEditLocationName] = useState("");
 
   useEffect(() => {
     loadLocations();
+    loadWarehouses();
   }, [currentParentId]);
+
+  const loadWarehouses = async () => {
+    try {
+      const wh = await getWarehouses();
+      setWarehouses(wh);
+      if (wh.length > 0 && !selectedWarehouseId) {
+        setSelectedWarehouseId(wh[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to load warehouses:", error);
+    }
+  };
 
   const loadLocations = async () => {
     setIsLoading(true);
@@ -105,20 +123,52 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
       return;
     }
 
+    if (!newLocationCode.trim()) {
+      Alert.alert("Error", "Please enter a location code");
+      return;
+    }
+
     if (user?.role !== "admin") {
       Alert.alert("Error", "Only administrators can create locations");
       return;
     }
 
+    // Determine warehouse ID
+    let warehouseId = selectedWarehouseId;
+    if (currentParentId !== null) {
+      // Get warehouse from parent location
+      const parentLocation = breadcrumb[breadcrumb.length - 1];
+      if (parentLocation?.warehouse_id) {
+        warehouseId = parentLocation.warehouse_id;
+      }
+    }
+
+    if (!warehouseId) {
+      Alert.alert("Error", "Please select a warehouse");
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert("Error", "User ID not found");
+      return;
+    }
+
     try {
-      await createLocation(newLocationName.trim(), currentParentId);
+      await createLocation(
+        newLocationName.trim(),
+        newLocationCode.trim(),
+        currentParentId,
+        warehouseId,
+        user.id
+      );
       setNewLocationName("");
+      setNewLocationCode("");
       setShowAddModal(false);
       loadLocations();
       Alert.alert("Success", "Location created successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create location:", error);
-      Alert.alert("Error", "Failed to create location");
+      Alert.alert("Error", error.message || "Failed to create location");
     }
   };
 
@@ -133,8 +183,13 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
       return;
     }
 
+    if (!user?.id) {
+      Alert.alert("Error", "User ID not found");
+      return;
+    }
+
     try {
-      await updateLocation(selectedLocation.id, editLocationName.trim());
+      await updateLocation(selectedLocation.id, editLocationName.trim(), user.id);
       setShowEditModal(false);
       setSelectedLocation(null);
       loadLocations();
@@ -151,6 +206,11 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
       return;
     }
 
+    if (!user?.id) {
+      Alert.alert("Error", "User ID not found");
+      return;
+    }
+
     Alert.alert(
       "Disable Location",
       `Are you sure you want to disable "${location.name}"? It will be hidden from location pickers.`,
@@ -161,7 +221,7 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
           style: "destructive",
           onPress: async () => {
             try {
-              await disableLocation(location.id);
+              await disableLocation(location.id, user.id);
               loadLocations();
               Alert.alert("Success", "Location disabled");
             } catch (error: any) {
@@ -349,9 +409,52 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
               onChangeText={setNewLocationName}
               placeholder="e.g., Room 1, Shelf A, Bin 5"
               placeholderTextColor="#9CA3AF"
-              className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900"
+              className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
               autoFocus
             />
+
+            <Text className="text-sm font-medium text-gray-700 mb-2">Location Code</Text>
+            <TextInput
+              value={newLocationCode}
+              onChangeText={(text) => setNewLocationCode(text.toUpperCase())}
+              placeholder="e.g., R1, SA, B5"
+              placeholderTextColor="#9CA3AF"
+              className="bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+              autoCapitalize="characters"
+            />
+
+            {currentParentId === null && warehouses.length > 0 && (
+              <>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Warehouse</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row mb-4">
+                  {warehouses.map((warehouse) => (
+                    <Pressable
+                      key={warehouse.id}
+                      onPress={() => setSelectedWarehouseId(warehouse.id)}
+                      className={`px-4 py-2 rounded-full mr-2 ${
+                        selectedWarehouseId === warehouse.id ? "bg-blue-600" : "bg-gray-100"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-medium ${
+                          selectedWarehouseId === warehouse.id ? "text-white" : "text-gray-700"
+                        }`}
+                      >
+                        {warehouse.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {currentParentId !== null && breadcrumb.length > 0 && (
+              <View className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <Text className="text-xs text-blue-900">
+                  Creating sublocation under: {breadcrumb[breadcrumb.length - 1].name}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View className="px-6 py-4 border-t border-gray-200">

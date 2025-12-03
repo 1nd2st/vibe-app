@@ -379,10 +379,62 @@ This app streamlines workflows for art logistics companies by providing two inte
 
 ## Inventory Management Module 🆕
 
+### Latest Updates - Enterprise Database Migration (Dec 3, 2025)
+- ✅ **Enhanced SQLite Database** - Full migration from Zustand to enterprise-class SQLite
+  - Database versioning system with migration support (v1, v2 complete)
+  - Comprehensive schema with Users, Warehouses, Locations, Items, Audit, PasswordPolicy tables
+  - Soft deletes with `deleted_at` field (data never truly deleted)
+  - Full relational integrity with foreign keys
+- ✅ **Location Code System** - Hierarchical location codes for label printing
+  - Auto-generated codes from parent path (e.g., "WH1-T-01-S01")
+  - `code_part` and `location_code` fields added to Location table
+  - Validation for alphanumeric codes only
+  - Ready for QR code label printing
+- ✅ **Password Security** - Enterprise-class authentication
+  - SHA-256 hashing with random salts
+  - Temporary password generation (12 chars, mixed case, numbers, symbols)
+  - Configurable password policy (min length, uppercase, lowercase, numbers, special chars)
+  - Force password change on first login
+  - Session management with UUID-based session IDs
+  - Account lockout after failed login attempts
+- ✅ **Enhanced Audit Trail** - Complete tracking for compliance
+  - ItemHistory table with IP address, app version, session ID
+  - ChangeLog table for critical system changes
+  - User actions automatically logged with timestamps
+  - Append-only audit logs (never modified or deleted)
+- ✅ **User Management** (Admin Only) - Full CRUD operations
+  - Create users with temp passwords
+  - Update user roles (admin/user)
+  - Enable/disable user accounts
+  - Reset user passwords
+  - All changes logged in ChangeLog
+- ✅ **Quick Access System** - Favorites and frequently used locations
+  - UserLocationUsage table tracks location access frequency
+  - Favorite locations for quick access
+  - Recently used locations automatically tracked
+  - Smart location suggestions based on usage patterns
+- ✅ **ZPL Label Generator** - Location label printing ready
+  - Generate ZPL code for 4x4" or 4x6" labels
+  - Large QR codes (2.5" - 3" for easy scanning)
+  - Location name, code, full path, warehouse name
+  - Code 128 barcode at bottom
+  - Batch printing support
+  - Helper functions for printer integration
+  - Preview URL generation (Labelary API)
+- ✅ **Updated Inventory Screens** - All screens use enhanced database
+  - ScanPutAwayScreen - Updated to use object-based createItem
+  - SearchItemScreen - Updated type imports
+  - InventoryItemDetailScreen - Updated function signatures
+  - BrowseLocationsScreen - Added code and warehouse inputs
+  - LocationPicker - Added code and warehouse inputs
+  - All function calls now match new signatures
+
 ### App Entry & Authentication
 When the app starts, users must log in with their credentials:
 - **Default Login**: `username: admin`, `password: admin`
 - **Role-Based Access**: Admin users can create/modify locations; regular users can move items
+- **Password Security**: Passwords hashed with SHA-256 and salts
+- **Session Tracking**: Each login creates a session tracked in audit logs
 
 ### Home Screen
 After login, users see two main options:

@@ -20,8 +20,8 @@ import {
   createItem,
   updateItemLocation,
   getTransitLocation,
-  InventoryItem,
-} from "../database/db";
+  type InventoryItem,
+} from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
 import LocationPicker from "../components/LocationPicker";
 
@@ -105,8 +105,7 @@ export default function ScanPutAwayScreen({ navigation }: Props) {
         item.id,
         batchLocation.id,
         "In storage",
-        user.id,
-        user.username
+        user.id
       );
 
       setBatchCount(batchCount + 1);
@@ -138,13 +137,14 @@ export default function ScanPutAwayScreen({ navigation }: Props) {
 
       // Create new item in transit
       const itemId = await createItem(
-        scannedCode,
-        newItemDescription || null,
-        newItemCustomer || null,
-        "Collected",
-        transitLocation.id,
-        user.id,
-        user.username
+        {
+          inventory_number: scannedCode,
+          description: newItemDescription || undefined,
+          customer_name: newItemCustomer || undefined,
+          status: "Collected",
+          location_id: transitLocation.id,
+        },
+        user.id
       );
 
       // Load the newly created item
@@ -172,8 +172,7 @@ export default function ScanPutAwayScreen({ navigation }: Props) {
         currentItem.id,
         locationId,
         "In storage",
-        user.id,
-        user.username
+        user.id
       );
 
       Alert.alert("Success", `Item moved to ${fullPath}`, [

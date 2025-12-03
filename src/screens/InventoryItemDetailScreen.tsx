@@ -20,10 +20,11 @@ import {
   getItemHistory,
   addItemNote,
   updateItemStatus,
-  InventoryItem,
-  ItemHistory,
-  ItemStatus,
-} from "../database/db";
+  updateItemLocation,
+  type InventoryItem,
+  type ItemHistory,
+  type ItemStatus,
+} from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
 import LocationPicker from "../components/LocationPicker";
 import { format } from "date-fns";
@@ -80,7 +81,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
     if (!user) return;
 
     try {
-      await addItemNote(itemId, noteText, user.id, user.username);
+      await addItemNote(itemId, noteText, user.id);
       setShowNoteModal(false);
       Alert.alert("Success", "Note saved");
       loadItem();
@@ -94,7 +95,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
     if (!user) return;
 
     try {
-      await updateItemStatus(itemId, newStatus, user.id, user.username);
+      await updateItemStatus(itemId, newStatus, user.id);
       setShowStatusModal(false);
       Alert.alert("Success", "Status updated");
       loadItem();
@@ -297,8 +298,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
         onSelectLocation={async (locationId, fullPath) => {
           if (!user) return;
           try {
-            const { updateItemLocation } = await import("../database/db");
-            await updateItemLocation(itemId, locationId, "In storage", user.id, user.username);
+            await updateItemLocation(itemId, locationId, "In storage", user.id);
             Alert.alert("Success", `Item moved to ${fullPath}`);
             loadItem();
           } catch (error) {

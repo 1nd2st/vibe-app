@@ -13,7 +13,7 @@ import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeStackParamList } from "../navigation/HomeNavigator";
-import { searchItems, InventoryItem, ItemStatus } from "../database/db";
+import { searchItems, type InventoryItem, type ItemStatus } from "../database/db-enhanced";
 
 type Props = NativeStackScreenProps<HomeStackParamList, "SearchItem">;
 
