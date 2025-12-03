@@ -2,6 +2,7 @@
 export type HomeStackParamList = {
   Login: undefined;
   Home: undefined;
+  Customers: undefined;
   Collections: undefined;
   InventoryMenu: undefined;
   ScanPutAway: undefined;

@@ -682,6 +682,20 @@ export const MIGRATIONS: Migration[] = [
       VALUES (1, 'admin', 'temp_hash', 'temp_salt', 'admin', 0, 1);
     `,
   },
+  {
+    version: 5,
+    name: "seed_sample_customers",
+    up: `
+      -- Add sample customers so the app has data to work with
+      INSERT OR IGNORE INTO Customer (id, uuid, name, phone, email, address)
+      VALUES
+        (1, 'CUST-001', 'John Smith', '+1-555-0101', 'john.smith@example.com', '123 Main Street, New York, NY 10001'),
+        (2, 'CUST-002', 'Sarah Johnson', '+1-555-0102', 'sarah.j@example.com', '456 Oak Avenue, Los Angeles, CA 90001'),
+        (3, 'CUST-003', 'Michael Brown', '+1-555-0103', 'mbrown@example.com', '789 Pine Road, Chicago, IL 60601'),
+        (4, 'CUST-004', 'Emily Davis', '+1-555-0104', 'emily.davis@example.com', '321 Elm Street, Houston, TX 77001'),
+        (5, 'CUST-005', 'David Wilson', '+1-555-0105', 'dwilson@example.com', '654 Maple Drive, Phoenix, AZ 85001');
+    `,
+  },
 ];
 
 // Get current schema version

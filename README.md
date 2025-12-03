@@ -17,11 +17,23 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 3, 2025)
+- ✅ **FIXED: Collections Navigation Flow** - Corrected navigation to show Customers first
+  - Collections button now navigates to Customers screen (not Collections list)
+  - User picks a customer, then creates a collection for that customer
+  - Added Customers to HomeStackParamList navigation types
+  - Restored sample customers via migration 5 (5 customers with contact info)
+- ✅ **FIXED: Admin Login After Database Reset** - Admin user properly recreated
+  - Migration 4 adds missing admin user after schema reset
+  - Password is hashed automatically on first database init
+  - Login credentials: username `admin`, password `admin`
+  - Database auto-recovery deletes and recreates corrupted database files
 - ✅ **CRITICAL FIX: Database Table Order** - Fixed foreign key constraint violations
-  - Reordered table definitions so Customer and Collection come before Item
+  - Reordered Warehouse BEFORE Location (warehouse_id foreign key fixed)
+  - Reordered Customer and Collection BEFORE Item table
   - Removed duplicate Collection and Customer table definitions
   - Fixed "no such column: warehouse_id" initialization error
   - Database now initializes correctly with proper foreign key relationships
+  - Migration 3 completely rebuilds database with correct table order
 - ✅ **Collections Screen Migrated to SQLite** - Full async data loading
   - Converted from Zustand to SQLite database queries
   - Added loading states with ActivityIndicator

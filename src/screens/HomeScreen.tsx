@@ -46,7 +46,7 @@ export default function HomeScreen({ navigation }: Props) {
         <View className="space-y-4">
           {/* Collection Button */}
           <Pressable
-            onPress={() => navigation.navigate("Collections")}
+            onPress={() => navigation.navigate("Customers")}
             className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 active:bg-gray-50"
           >
             <View className="items-center">
