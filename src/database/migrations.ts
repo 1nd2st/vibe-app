@@ -237,6 +237,96 @@ export const MIGRATIONS: Migration[] = [
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP
       );
 
+      -- Customer table (for art collections)
+      CREATE TABLE IF NOT EXISTS Customer (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        address TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- CustomerLocation table (pickup/delivery locations for customers)
+      CREATE TABLE IF NOT EXISTS CustomerLocation (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        customer_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        address TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('pickup', 'delivery', 'both')),
+        is_default INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (customer_id) REFERENCES Customer(id) ON DELETE CASCADE
+      );
+
+      -- Collection table (art collection jobs)
+      CREATE TABLE IF NOT EXISTS Collection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        display_id TEXT UNIQUE NOT NULL,
+        customer_id INTEGER NOT NULL,
+        customer_name TEXT NOT NULL,
+        collection_date INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed', 'signed')),
+        pickup_address TEXT NOT NULL,
+        delivery_address TEXT,
+        employee_name TEXT NOT NULL,
+        notes TEXT,
+        signature_uri TEXT,
+        signer_name TEXT,
+        signer_role TEXT,
+        signature_timestamp INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (customer_id) REFERENCES Customer(id)
+      );
+
+      -- CollectionItem table (items within a collection)
+      CREATE TABLE IF NOT EXISTS CollectionItem (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        display_id TEXT UNIQUE NOT NULL,
+        collection_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        artist_name TEXT,
+        dimensions_length REAL NOT NULL,
+        dimensions_width REAL NOT NULL,
+        dimensions_height REAL NOT NULL,
+        dimensions_unit TEXT NOT NULL CHECK(dimensions_unit IN ('cm', 'in')),
+        weight REAL,
+        weight_unit TEXT CHECK(weight_unit IN ('kg', 'lb')),
+        estimated_value REAL NOT NULL,
+        currency TEXT NOT NULL CHECK(currency IN ('USD', 'EUR', 'GBP')),
+        overall_condition TEXT NOT NULL CHECK(overall_condition IN ('Excellent', 'Good', 'Fair', 'Poor', 'Damaged')),
+        condition_notes TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (collection_id) REFERENCES Collection(id) ON DELETE CASCADE
+      );
+
+      -- CollectionItemPhoto table (photos for collection items)
+      CREATE TABLE IF NOT EXISTS CollectionItemPhoto (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        collection_item_id INTEGER NOT NULL,
+        uri TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        condition_notes TEXT,
+        ai_detected_damage TEXT,
+        ai_analyzed INTEGER DEFAULT 0,
+        annotation_data TEXT,
+        annotated_image_uri TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (collection_item_id) REFERENCES CollectionItem(id) ON DELETE CASCADE
+      );
+
       -- Indexes for performance
       CREATE INDEX IF NOT EXISTS idx_location_parent ON Location(parent_id);
       CREATE INDEX IF NOT EXISTS idx_location_warehouse ON Location(warehouse_id);
@@ -252,8 +342,14 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_history_timestamp ON ItemHistory(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_history_user ON ItemHistory(user_id);
       CREATE INDEX IF NOT EXISTS idx_user_username ON User(username);
+      CREATE INDEX IF NOT EXISTS idx_customer_name ON Customer(name);
+      CREATE INDEX IF NOT EXISTS idx_customer_location_customer ON CustomerLocation(customer_id);
       CREATE INDEX IF NOT EXISTS idx_collection_customer ON Collection(customer_id);
       CREATE INDEX IF NOT EXISTS idx_collection_status ON Collection(status);
+      CREATE INDEX IF NOT EXISTS idx_collection_display_id ON Collection(display_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_collection ON CollectionItem(collection_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_display_id ON CollectionItem(display_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_photo_item ON CollectionItemPhoto(collection_item_id);
       CREATE INDEX IF NOT EXISTS idx_photo_item ON ItemPhoto(item_id);
       CREATE INDEX IF NOT EXISTS idx_usage_user ON UserLocationUsage(user_id);
       CREATE INDEX IF NOT EXISTS idx_usage_location ON UserLocationUsage(location_id);
