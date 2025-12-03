@@ -343,6 +343,336 @@ export const MIGRATIONS: Migration[] = [
       VALUES (2, 'Transit Room', 1, 'Warehouse 1 / Transit Room', 'T', 'WH1-T', 1, 1, 1, 1);
     `,
   },
+  {
+    version: 2,
+    name: "fix_table_order_warehouse_location",
+    up: `
+      -- Drop tables in reverse dependency order
+      DROP TABLE IF EXISTS CollectionItemPhoto;
+      DROP TABLE IF EXISTS CollectionItem;
+      DROP TABLE IF EXISTS CustomerLocation;
+      DROP TABLE IF EXISTS LoginAttempt;
+      DROP TABLE IF EXISTS AuditLog;
+      DROP TABLE IF EXISTS Session;
+      DROP TABLE IF EXISTS ItemHistory;
+      DROP TABLE IF EXISTS ItemPhoto;
+      DROP TABLE IF EXISTS Item;
+      DROP TABLE IF EXISTS Collection;
+      DROP TABLE IF EXISTS Customer;
+      DROP TABLE IF EXISTS User;
+      DROP TABLE IF EXISTS Location;
+      DROP TABLE IF EXISTS Warehouse;
+      DROP TABLE IF EXISTS PasswordPolicy;
+
+      -- Recreate Warehouse BEFORE Location (fixed order)
+      CREATE TABLE IF NOT EXISTS Warehouse (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        code TEXT UNIQUE NOT NULL,
+        address TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- Now create Location with warehouse_id reference working
+      CREATE TABLE IF NOT EXISTS Location (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        parent_id INTEGER,
+        full_path TEXT NOT NULL,
+        code_part TEXT,
+        location_code TEXT UNIQUE,
+        level INTEGER DEFAULT 0,
+        warehouse_id INTEGER,
+        is_transit INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (parent_id) REFERENCES Location(id),
+        FOREIGN KEY (warehouse_id) REFERENCES Warehouse(id)
+      );
+
+      -- User table
+      CREATE TABLE IF NOT EXISTS User (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        role TEXT DEFAULT 'user' CHECK(role IN ('user', 'admin')),
+        must_change_password INTEGER DEFAULT 0,
+        password_changed_at TEXT,
+        last_login_at TEXT,
+        failed_login_attempts INTEGER DEFAULT 0,
+        locked_until TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- Customer table (before Collection)
+      CREATE TABLE IF NOT EXISTS Customer (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        email TEXT NOT NULL,
+        address TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT
+      );
+
+      -- Collection table (before Item)
+      CREATE TABLE IF NOT EXISTS Collection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        display_id TEXT UNIQUE NOT NULL,
+        customer_id INTEGER NOT NULL,
+        customer_name TEXT NOT NULL,
+        collection_date INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed', 'signed')),
+        pickup_address TEXT NOT NULL,
+        delivery_address TEXT,
+        employee_name TEXT NOT NULL,
+        notes TEXT,
+        signature_uri TEXT,
+        signer_name TEXT,
+        signer_role TEXT,
+        signature_timestamp INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (customer_id) REFERENCES Customer(id)
+      );
+
+      -- Item table (after Location, Customer, Collection, User)
+      CREATE TABLE IF NOT EXISTS Item (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        inventory_number TEXT UNIQUE NOT NULL,
+        title TEXT,
+        description TEXT,
+        artist_name TEXT,
+        customer_id INTEGER,
+        customer_name TEXT,
+        collection_id INTEGER,
+        status TEXT NOT NULL CHECK(status IN ('Collected', 'In transit', 'In storage', 'Packed', 'Shipped', 'Delivered', 'Cancelled')),
+        current_location_id INTEGER,
+        current_location_path TEXT,
+        dimensions_length REAL,
+        dimensions_width REAL,
+        dimensions_height REAL,
+        dimensions_unit TEXT,
+        estimated_value REAL,
+        currency TEXT,
+        overall_condition TEXT,
+        condition_notes TEXT,
+        notes TEXT,
+        is_archived INTEGER DEFAULT 0,
+        created_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (current_location_id) REFERENCES Location(id),
+        FOREIGN KEY (collection_id) REFERENCES Collection(id),
+        FOREIGN KEY (customer_id) REFERENCES Customer(id),
+        FOREIGN KEY (created_by) REFERENCES User(id)
+      );
+
+      -- ItemPhoto table
+      CREATE TABLE IF NOT EXISTS ItemPhoto (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        item_id INTEGER NOT NULL,
+        uri TEXT NOT NULL,
+        condition_notes TEXT,
+        ai_detected_damage TEXT,
+        ai_analyzed INTEGER DEFAULT 0,
+        annotation_data TEXT,
+        annotated_uri TEXT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (item_id) REFERENCES Item(id) ON DELETE CASCADE
+      );
+
+      -- ItemHistory table
+      CREATE TABLE IF NOT EXISTS ItemHistory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        action TEXT NOT NULL,
+        user_id INTEGER,
+        user_name TEXT,
+        old_location_path TEXT,
+        new_location_path TEXT,
+        notes TEXT,
+        session_id TEXT,
+        FOREIGN KEY (item_id) REFERENCES Item(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES User(id)
+      );
+
+      -- PasswordPolicy table
+      CREATE TABLE IF NOT EXISTS PasswordPolicy (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        min_length INTEGER DEFAULT 8,
+        require_uppercase INTEGER DEFAULT 1,
+        require_lowercase INTEGER DEFAULT 1,
+        require_number INTEGER DEFAULT 1,
+        require_special_char INTEGER DEFAULT 0,
+        password_expiry_days INTEGER DEFAULT 0,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_by INTEGER,
+        FOREIGN KEY (updated_by) REFERENCES User(id)
+      );
+
+      -- Session table
+      CREATE TABLE IF NOT EXISTS Session (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL,
+        device_id TEXT,
+        app_version TEXT,
+        started_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        ended_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES User(id)
+      );
+
+      -- AuditLog table
+      CREATE TABLE IF NOT EXISTS AuditLog (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER,
+        action TEXT NOT NULL,
+        user_id INTEGER,
+        user_name TEXT,
+        old_values TEXT,
+        new_values TEXT,
+        ip_address TEXT,
+        app_version TEXT,
+        session_id TEXT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES User(id)
+      );
+
+      -- LoginAttempt table
+      CREATE TABLE IF NOT EXISTS LoginAttempt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        success INTEGER NOT NULL,
+        ip_address TEXT,
+        device_id TEXT,
+        app_version TEXT,
+        error_message TEXT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- CustomerLocation table
+      CREATE TABLE IF NOT EXISTS CustomerLocation (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        customer_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        address TEXT NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('pickup', 'delivery', 'both')),
+        is_default INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (customer_id) REFERENCES Customer(id) ON DELETE CASCADE
+      );
+
+      -- CollectionItem table
+      CREATE TABLE IF NOT EXISTS CollectionItem (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        display_id TEXT UNIQUE NOT NULL,
+        collection_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        artist_name TEXT,
+        dimensions_length REAL NOT NULL,
+        dimensions_width REAL NOT NULL,
+        dimensions_height REAL NOT NULL,
+        dimensions_unit TEXT NOT NULL CHECK(dimensions_unit IN ('cm', 'in')),
+        weight REAL,
+        weight_unit TEXT CHECK(weight_unit IN ('kg', 'lb')),
+        estimated_value REAL NOT NULL,
+        currency TEXT NOT NULL CHECK(currency IN ('USD', 'EUR', 'GBP')),
+        overall_condition TEXT NOT NULL CHECK(overall_condition IN ('Excellent', 'Good', 'Fair', 'Poor', 'Damaged')),
+        condition_notes TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TEXT,
+        FOREIGN KEY (collection_id) REFERENCES Collection(id) ON DELETE CASCADE
+      );
+
+      -- CollectionItemPhoto table
+      CREATE TABLE IF NOT EXISTS CollectionItemPhoto (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT UNIQUE NOT NULL,
+        collection_item_id INTEGER NOT NULL,
+        uri TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        condition_notes TEXT,
+        ai_detected_damage TEXT,
+        ai_analyzed INTEGER DEFAULT 0,
+        annotation_data TEXT,
+        annotated_image_uri TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (collection_item_id) REFERENCES CollectionItem(id) ON DELETE CASCADE
+      );
+
+      -- Indexes
+      CREATE INDEX IF NOT EXISTS idx_location_parent ON Location(parent_id);
+      CREATE INDEX IF NOT EXISTS idx_location_warehouse ON Location(warehouse_id);
+      CREATE INDEX IF NOT EXISTS idx_location_code ON Location(location_code);
+      CREATE INDEX IF NOT EXISTS idx_location_is_active ON Location(is_active);
+      CREATE INDEX IF NOT EXISTS idx_item_inventory_number ON Item(inventory_number);
+      CREATE INDEX IF NOT EXISTS idx_item_collection ON Item(collection_id);
+      CREATE INDEX IF NOT EXISTS idx_item_customer ON Item(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_item_location ON Item(current_location_id);
+      CREATE INDEX IF NOT EXISTS idx_item_status ON Item(status);
+      CREATE INDEX IF NOT EXISTS idx_item_is_archived ON Item(is_archived);
+      CREATE INDEX IF NOT EXISTS idx_item_deleted ON Item(deleted_at);
+      CREATE INDEX IF NOT EXISTS idx_item_history_item ON ItemHistory(item_id);
+      CREATE INDEX IF NOT EXISTS idx_item_history_timestamp ON ItemHistory(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_item_history_user ON ItemHistory(user_id);
+      CREATE INDEX IF NOT EXISTS idx_item_history_session ON ItemHistory(session_id);
+      CREATE INDEX IF NOT EXISTS idx_item_photo_item ON ItemPhoto(item_id);
+      CREATE INDEX IF NOT EXISTS idx_user_username ON User(username);
+      CREATE INDEX IF NOT EXISTS idx_user_is_active ON User(is_active);
+      CREATE INDEX IF NOT EXISTS idx_session_uuid ON Session(uuid);
+      CREATE INDEX IF NOT EXISTS idx_session_user ON Session(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_entity ON AuditLog(entity_type, entity_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_user ON AuditLog(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON AuditLog(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_customer_uuid ON Customer(uuid);
+      CREATE INDEX IF NOT EXISTS idx_customer_deleted ON Customer(deleted_at);
+      CREATE INDEX IF NOT EXISTS idx_collection_uuid ON Collection(uuid);
+      CREATE INDEX IF NOT EXISTS idx_collection_display_id ON Collection(display_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_customer ON Collection(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_status ON Collection(status);
+      CREATE INDEX IF NOT EXISTS idx_collection_deleted ON Collection(deleted_at);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_uuid ON CollectionItem(uuid);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_display_id ON CollectionItem(display_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_collection ON CollectionItem(collection_id);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_deleted ON CollectionItem(deleted_at);
+      CREATE INDEX IF NOT EXISTS idx_collection_item_photo_item ON CollectionItemPhoto(collection_item_id);
+
+      -- Recreate default warehouse and locations
+      INSERT OR IGNORE INTO Warehouse (id, name, code, is_active) VALUES (1, 'Warehouse 1', 'WH1', 1);
+      INSERT OR IGNORE INTO Location (id, name, parent_id, full_path, code_part, location_code, level, warehouse_id, is_transit, is_active)
+      VALUES (1, 'Warehouse 1', NULL, 'Warehouse 1', 'WH1', 'WH1', 0, 1, 0, 1);
+      INSERT OR IGNORE INTO Location (id, name, parent_id, full_path, code_part, location_code, level, warehouse_id, is_transit, is_active)
+      VALUES (2, 'Transit Room', 1, 'Warehouse 1 / Transit Room', 'T', 'WH1-T', 1, 1, 1, 1);
+
+      -- Recreate default password policy
+      INSERT OR IGNORE INTO PasswordPolicy (id, min_length, require_uppercase, require_lowercase, require_number, require_special_char, password_expiry_days)
+      VALUES (1, 8, 1, 1, 1, 0, 0);
+    `,
+  },
 ];
 
 // Get current schema version
