@@ -181,6 +181,40 @@ export async function initDatabase(): Promise<void> {
     console.log("✅ Database initialized successfully");
   } catch (error) {
     console.error("❌ Database initialization failed:", error);
+
+    // If we get a "no such column: warehouse_id" error, the database schema is corrupted
+    // Delete and recreate the database
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes("no such column: warehouse_id") || errorMessage.includes("table order")) {
+      console.log("🔄 Detected schema corruption. Deleting and recreating database...");
+      try {
+        // Close the database
+        if (db) {
+          await db.closeAsync();
+        }
+
+        // Delete the database file
+        await SQLite.deleteDatabaseAsync("inventory.db");
+        console.log("🗑️  Old database deleted");
+
+        // Recreate the database
+        db = await SQLite.openDatabaseAsync("inventory.db");
+        console.log("📦 New database created");
+
+        // Run migrations on fresh database
+        await runMigrations(db);
+        console.log("✅ Migrations applied to fresh database");
+
+        // Initialize admin user
+        await initializeAdminUser();
+        console.log("✅ Database reset and initialized successfully");
+        return;
+      } catch (resetError) {
+        console.error("❌ Failed to reset database:", resetError);
+        throw resetError;
+      }
+    }
+
     throw error;
   }
 }

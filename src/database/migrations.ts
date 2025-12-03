@@ -311,10 +311,6 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_collection_item_display_id ON CollectionItem(display_id);
       CREATE INDEX IF NOT EXISTS idx_collection_item_photo_item ON CollectionItemPhoto(collection_item_id);
       CREATE INDEX IF NOT EXISTS idx_photo_item ON ItemPhoto(item_id);
-      CREATE INDEX IF NOT EXISTS idx_usage_user ON UserLocationUsage(user_id);
-      CREATE INDEX IF NOT EXISTS idx_usage_location ON UserLocationUsage(location_id);
-      CREATE INDEX IF NOT EXISTS idx_changelog_entity ON ChangeLog(entity_type, entity_id);
-      CREATE INDEX IF NOT EXISTS idx_changelog_timestamp ON ChangeLog(timestamp DESC);
     `,
   },
   {
@@ -344,7 +340,7 @@ export const MIGRATIONS: Migration[] = [
     `,
   },
   {
-    version: 2,
+    version: 3,
     name: "fix_table_order_warehouse_location",
     up: `
       -- Drop tables in reverse dependency order
