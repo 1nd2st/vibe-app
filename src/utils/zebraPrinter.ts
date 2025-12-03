@@ -3,7 +3,12 @@ import type { CollectionItem } from "../types/collection";
 
 /**
  * Send ZPL code directly to Zebra printer via network
- * Uses raw TCP socket connection to printer IP:PORT
+ *
+ * NOTE: This attempts HTTP POST which works if the printer has a web interface.
+ * For raw port 9100 printing, you may need to:
+ * 1. Use a network bridge/proxy server
+ * 2. Configure printer's web interface (port 80 or 443)
+ * 3. Use printer's cloud print service if available
  */
 export const printZPLToNetwork = async (
   zplCode: string,
@@ -11,7 +16,7 @@ export const printZPLToNetwork = async (
   printerPort: number = 9100
 ): Promise<boolean> => {
   try {
-    // Create WebSocket connection (works for network printers)
+    // Try HTTP POST to printer
     const response = await fetch(`http://${printerIp}:${printerPort}`, {
       method: "POST",
       headers: {
@@ -20,17 +25,40 @@ export const printZPLToNetwork = async (
       body: zplCode,
     });
 
-    if (response.ok) {
+    // Check for successful response
+    if (response.ok || response.status === 204) {
       return true;
-    } else {
-      throw new Error(`Printer responded with status: ${response.status}`);
     }
-  } catch (error) {
+
+    // Handle specific error codes
+    if (response.status === 401) {
+      Alert.alert(
+        "Printer Authentication Required",
+        `The printer at ${printerIp}:${printerPort} requires authentication.\n\nPlease check:\n• Printer web interface settings\n• Try port 80 instead of ${printerPort}\n• Printer may require login credentials`
+      );
+      return false;
+    }
+
+    if (response.status === 404) {
+      Alert.alert(
+        "Printer Not Found",
+        `No printer web interface found at ${printerIp}:${printerPort}.\n\nFor raw ZPL printing:\n• Try port 80 for web interface\n• Port 9100 requires raw TCP (not HTTP)\n• Check printer supports network printing`
+      );
+      return false;
+    }
+
+    throw new Error(`Printer responded with status: ${response.status}`);
+  } catch (error: any) {
+    // Don't show alert here, let calling function handle it
     console.error("Failed to print to network printer:", error);
-    Alert.alert(
-      "Print Failed",
-      `Could not connect to printer at ${printerIp}:${printerPort}. Please check:\n\n• Printer is powered on\n• Printer IP address is correct\n• Device is on same network\n• Printer port is ${printerPort}`
-    );
+
+    // Only show alert if we haven't already shown a specific one
+    if (!error.message?.includes("Printer")) {
+      Alert.alert(
+        "Print Failed",
+        `Could not connect to printer at ${printerIp}:${printerPort}.\n\nTroubleshooting:\n• Verify printer IP address\n• Try port 80 (web interface)\n• Check device is on same network\n• Printer must be powered on\n\nError: ${error.message || "Network error"}`
+      );
+    }
     return false;
   }
 };

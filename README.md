@@ -519,6 +519,27 @@ Each label includes:
 - **No Output**: Check printer is powered on and ready
 - **Partial Success**: First label prints but subsequent fail - printer may be busy
 - **Wrong Size**: Adjust label dimensions in settings to match physical labels
+- **401 Authentication Error**:
+  - Printer web interface requires login credentials
+  - Try using port 80 (standard web interface port) instead of 9100
+  - Configure printer to allow anonymous ZPL submission
+  - Check printer's network settings for authentication requirements
+- **404 Not Found Error**:
+  - Port 9100 is for raw TCP, not HTTP (React Native limitation)
+  - Try port 80 for printer's web interface
+  - Check if printer supports HTTP-based ZPL submission
+  - May need network bridge/proxy server for raw TCP printing
+
+### Technical Limitations
+React Native apps cannot create raw TCP socket connections directly. This implementation uses HTTP POST, which works with:
+- Zebra printers with web interface (typically port 80)
+- Printers configured to accept ZPL via HTTP
+- Network print servers that bridge HTTP to raw TCP
+
+For raw port 9100 printing, consider:
+1. Setting up a simple Node.js proxy server on your network
+2. Using printer's web interface (port 80) if available
+3. Configuring printer to accept HTTP POST requests
 
 ## AI Damage Detection
 
