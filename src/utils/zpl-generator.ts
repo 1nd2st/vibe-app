@@ -8,6 +8,13 @@ export interface LocationLabelData {
   warehouseName?: string;
 }
 
+export interface InventoryItemLabelData {
+  inventoryNumber: string;
+  description?: string;
+  customerName?: string;
+  currentLocation?: string;
+}
+
 export type LabelSize = "4x4" | "4x6";
 
 /**
@@ -184,4 +191,111 @@ export function downloadZPL(zpl: string, filename: string = "labels.zpl"): void 
   // This would be implemented with expo-sharing or similar
   console.log("ZPL file ready for download:", filename);
   console.log(zpl);
+}
+
+/**
+ * Generate ZPL code for an inventory item label
+ * @param data Inventory item data to print
+ * @param size Label size (4x4 or 4x6 inches)
+ * @returns ZPL code string ready to send to printer
+ */
+export function generateInventoryItemLabel(
+  data: InventoryItemLabelData,
+  size: LabelSize = "4x4"
+): string {
+  const { inventoryNumber, description, customerName, currentLocation } = data;
+
+  // Convert inches to dots (203 DPI for most Zebra printers)
+  const DPI = 203;
+  const labelWidth = 4 * DPI; // 812 dots
+  const labelHeight = size === "4x4" ? 4 * DPI : 6 * DPI; // 812 or 1218 dots
+
+  // QR code size - make it large for easy scanning
+  const qrSize = size === "4x4" ? 10 : 12; // Magnification factor
+
+  // Calculate positions (centered)
+  const qrX = 100; // Left margin
+  const qrY = 80; // Top margin
+
+  // Text positions
+  const textX = qrX + (qrSize * 33) + 50; // Right of QR code
+  let currentY = qrY + 20;
+
+  // Build ZPL code
+  let zpl = "";
+
+  // Start label
+  zpl += "^XA\n"; // Start format
+  zpl += "^LH0,0\n"; // Set label home position
+
+  // Print QR Code with inventory number
+  zpl += `^FO${qrX},${qrY}\n`; // Field origin
+  zpl += "^BQN,2," + qrSize + "\n"; // QR code, normal orientation, error correction level H
+  zpl += `^FDQA,${inventoryNumber}^FS\n`; // QR code data
+
+  // Print "ITEM" label (small header)
+  zpl += `^FO${textX},${currentY}\n`;
+  zpl += "^A0N,28,28\n";
+  zpl += "^FDITEM^FS\n";
+  currentY += 40;
+
+  // Print Inventory Number (extra large, bold)
+  zpl += `^FO${textX},${currentY}\n`;
+  zpl += "^A0N,60,60\n"; // Font 0, normal, height 60, width 60
+  zpl += `^FD${inventoryNumber}^FS\n`;
+  currentY += 80;
+
+  // Print Description (if provided)
+  if (description) {
+    zpl += `^FO${textX},${currentY}\n`;
+    zpl += "^A0N,30,30\n";
+    zpl += `^FD${truncateText(description, 22)}^FS\n`;
+    currentY += 45;
+  }
+
+  // Print Customer Name (if provided)
+  if (customerName) {
+    zpl += `^FO${textX},${currentY}\n`;
+    zpl += "^A0N,28,28\n";
+    zpl += `^FDCustomer: ${truncateText(customerName, 18)}^FS\n`;
+    currentY += 40;
+  }
+
+  // Print Location (if provided)
+  if (currentLocation) {
+    zpl += `^FO${textX},${currentY}\n`;
+    zpl += "^A0N,26,26\n";
+    zpl += `^FDLocation: ${truncateText(currentLocation, 18)}^FS\n`;
+    currentY += 38;
+  }
+
+  // Add border for 4x6 labels
+  if (size === "4x6") {
+    zpl += "^FO50,50^GB712,1118,4^FS\n"; // Border box
+  }
+
+  // Print barcode at bottom (Code 128)
+  const barcodeY = size === "4x4" ? labelHeight - 150 : labelHeight - 180;
+  zpl += `^FO${qrX},${barcodeY}\n`;
+  zpl += "^BY3,3,80\n"; // Bar width, ratio, height
+  zpl += `^BCN,80,Y,N,N\n`; // Code 128, height 80, print interpretation line
+  zpl += `^FD${inventoryNumber}^FS\n`;
+
+  // End label
+  zpl += "^XZ\n"; // End format
+
+  return zpl;
+}
+
+/**
+ * Generate ZPL code for multiple inventory item labels in batch
+ * @param items Array of inventory item data
+ * @param size Label size
+ * @returns ZPL code for all labels
+ */
+export function generateInventoryItemLabelBatch(
+  items: InventoryItemLabelData[],
+  size: LabelSize = "4x4"
+): string {
+  return items.map((item) => generateInventoryItemLabel(item, size)).join("\n");
 }

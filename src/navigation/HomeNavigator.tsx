@@ -11,4 +11,8 @@ export type HomeStackParamList = {
   LocationPicker: {
     onSelectLocation: (locationId: number, fullPath: string) => void;
   };
+  InventorySettings: undefined;
+  UserManagement: undefined;
+  PasswordPolicy: undefined;
+  ChangePassword: undefined;
 };

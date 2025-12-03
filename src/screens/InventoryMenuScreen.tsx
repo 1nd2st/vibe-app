@@ -94,6 +94,27 @@ export default function InventoryMenuScreen({ navigation }: Props) {
               <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
             </View>
           </Pressable>
+
+          {/* Settings */}
+          <Pressable
+            onPress={() => navigation.navigate("InventorySettings")}
+            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 active:bg-gray-50"
+          >
+            <View className="flex-row items-center">
+              <View className="bg-orange-100 rounded-full p-4 mr-4">
+                <Ionicons name="settings-outline" size={32} color="#EA580C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-xl font-bold text-gray-900 mb-1">
+                  Settings
+                </Text>
+                <Text className="text-sm text-gray-600">
+                  Manage users, passwords, and printer settings
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+            </View>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

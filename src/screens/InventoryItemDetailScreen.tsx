@@ -28,6 +28,11 @@ import {
 import { useAuthStore } from "../state/authStore";
 import LocationPicker from "../components/LocationPicker";
 import { format } from "date-fns";
+import {
+  generateInventoryItemLabel,
+  type LabelSize,
+  type InventoryItemLabelData,
+} from "../utils/zpl-generator";
 
 type Props = NativeStackScreenProps<HomeStackParamList, "InventoryItemDetail">;
 
@@ -50,7 +55,10 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [labelSize, setLabelSize] = useState<LabelSize>("4x4");
+  const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
     loadItem();
@@ -102,6 +110,53 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
     } catch (error) {
       console.error("Failed to update status:", error);
       Alert.alert("Error", "Failed to update status");
+    }
+  };
+
+  const handlePrintLabel = async () => {
+    if (!item) return;
+
+    setIsPrinting(true);
+    try {
+      // Prepare label data
+      const labelData: InventoryItemLabelData = {
+        inventoryNumber: item.inventory_number,
+        description: item.description || undefined,
+        customerName: item.customer_name || undefined,
+        currentLocation: item.current_location_path || undefined,
+      };
+
+      // Generate ZPL
+      const zpl = generateInventoryItemLabel(labelData, labelSize);
+
+      // For now, show preview/success (printer integration coming soon)
+      Alert.alert(
+        "Label Generated",
+        `✓ Generated label for ${item.inventory_number}\n\n` +
+        `Size: ${labelSize}\n` +
+        `ZPL code generated successfully.\n\n` +
+        `To print:\n` +
+        `1. Configure printer in Settings\n` +
+        `2. ZPL will be sent to printer automatically\n\n` +
+        `(Printer integration coming soon)`,
+        [
+          {
+            text: "Copy ZPL",
+            onPress: () => {
+              console.log("ZPL Code:\n", zpl);
+              Alert.alert("Success", "ZPL copied to logs. Check console for ZPL code.");
+            },
+          },
+          { text: "Done", style: "default" },
+        ]
+      );
+
+      setShowPrintModal(false);
+    } catch (error: any) {
+      console.error("Failed to generate label:", error);
+      Alert.alert("Error", error.message || "Failed to generate label");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -241,6 +296,13 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
             <Ionicons name="create" size={24} color="#9333EA" />
             <Text className="text-sm font-semibold text-purple-900 mt-1">Add Note</Text>
           </Pressable>
+          <Pressable
+            onPress={() => setShowPrintModal(true)}
+            className="flex-1 bg-orange-100 rounded-xl p-4 items-center active:bg-orange-200"
+          >
+            <Ionicons name="print" size={24} color="#EA580C" />
+            <Text className="text-sm font-semibold text-orange-900 mt-1">Print Label</Text>
+          </Pressable>
         </View>
 
         {/* History Section */}
@@ -364,6 +426,108 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
             </Pressable>
           </View>
         </View>
+      </Modal>
+
+      {/* Print Label Modal */}
+      <Modal visible={showPrintModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView className="flex-1 bg-white">
+          <View className="px-6 py-4 border-b border-gray-200">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-gray-900">Print Label</Text>
+              <Pressable onPress={() => setShowPrintModal(false)}>
+                <Ionicons name="close" size={28} color="#374151" />
+              </Pressable>
+            </View>
+          </View>
+
+          <View className="flex-1 px-6 py-6">
+            {/* Label Size Selection */}
+            <View className="mb-6">
+              <Text className="text-base font-semibold text-gray-900 mb-3">Label Size</Text>
+              <View className="flex-row space-x-3">
+                <Pressable
+                  onPress={() => setLabelSize("4x4")}
+                  className={`flex-1 py-3 rounded-xl border-2 ${labelSize === "4x4" ? "bg-blue-50 border-blue-500" : "bg-gray-50 border-gray-200"}`}
+                >
+                  <Text className={`text-center font-semibold ${labelSize === "4x4" ? "text-blue-900" : "text-gray-700"}`}>
+                    4&quot; x 4&quot;
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setLabelSize("4x6")}
+                  className={`flex-1 py-3 rounded-xl border-2 ${labelSize === "4x6" ? "bg-blue-50 border-blue-500" : "bg-gray-50 border-gray-200"}`}
+                >
+                  <Text className={`text-center font-semibold ${labelSize === "4x6" ? "text-blue-900" : "text-gray-700"}`}>
+                    4&quot; x 6&quot;
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Label Preview Info */}
+            <View className="bg-gray-50 rounded-xl p-4 mb-4">
+              <Text className="text-sm font-semibold text-gray-900 mb-2">Label will include:</Text>
+              <View className="space-y-2">
+                <View className="flex-row items-center">
+                  <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                  <Text className="text-sm text-gray-700 ml-2">Large QR code for scanning</Text>
+                </View>
+                <View className="flex-row items-center">
+                  <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                  <Text className="text-sm text-gray-700 ml-2">Inventory number (large text)</Text>
+                </View>
+                {item?.description && (
+                  <View className="flex-row items-center">
+                    <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                    <Text className="text-sm text-gray-700 ml-2">Item description</Text>
+                  </View>
+                )}
+                {item?.customer_name && (
+                  <View className="flex-row items-center">
+                    <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                    <Text className="text-sm text-gray-700 ml-2">Customer name</Text>
+                  </View>
+                )}
+                {item?.current_location_path && (
+                  <View className="flex-row items-center">
+                    <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                    <Text className="text-sm text-gray-700 ml-2">Current location</Text>
+                  </View>
+                )}
+                <View className="flex-row items-center">
+                  <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                  <Text className="text-sm text-gray-700 ml-2">Barcode (Code 128)</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Info Notice */}
+            <View className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <View className="flex-row">
+                <Ionicons name="information-circle" size={20} color="#2563EB" />
+                <View className="flex-1 ml-3">
+                  <Text className="text-sm text-blue-900">
+                    Labels are generated in ZPL format for Zebra printers. Configure your printer in Settings to enable automatic printing.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View className="px-6 py-4 border-t border-gray-200">
+            <Pressable
+              onPress={handlePrintLabel}
+              disabled={isPrinting}
+              className={`rounded-xl py-4 ${isPrinting ? "bg-gray-400" : "bg-blue-600 active:bg-blue-700"}`}
+            >
+              {isPrinting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-white text-center font-semibold">Generate Label</Text>
+              )}
+            </Pressable>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
