@@ -4,7 +4,31 @@ A professional mobile application for art moving and logistics companies to docu
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
-### **Latest Updates** (Dec 2, 2025)
+### **Latest Updates** (Dec 3, 2025)
+- ✅ **Zebra Network Printing** - Direct label printing to Zebra printers
+  - Configure printer IP and settings in Settings screen
+  - Test label button prints with 5 DPI smaller frame for verification
+  - Print individual labels from ItemDetailScreen
+  - Bulk print labels from CollectionDetailScreen selection mode
+  - Sequential printing with 200ms delay between labels
+  - Success/failure feedback with progress indicators
+  - Labels include item ID, title, collection, condition, dimensions, value
+  - Support for 203, 300, and 600 DPI printers
+  - Default port 9100 (standard Zebra printer port)
+- ✅ **Email Reports with Photos** - All photos now included in email reports (not just first 4)
+  - Previously limited to first 4 photos per item
+  - Now includes ALL photos for complete documentation
+- ✅ **Full-Screen Collection Creation** - New Collection screen opens as full card
+  - Previously appeared as 75% height modal
+  - Now fills entire screen for better mobile experience
+- ✅ **Bulk Selection Mode** - Select multiple items for operations
+  - Select all items by default when entering selection mode
+  - Print QR codes for selected items
+  - Print Zebra labels for selected items
+  - Visual checkboxes and selection count
+  - Two-button action bar: Labels and QR Codes
+
+### **Previous Updates** (Dec 2, 2025)
 - ✅ **Full-Screen Photo Notes Modal** - Spacious modal for detailed condition notes
   - 300px photo preview (up from 180px)
   - 200px text input area with 1000 character limit
@@ -217,13 +241,16 @@ This app streamlines the collection process for art logistics companies by provi
 - **Print-ready** - Can be captured and printed for labels
 - Scanner accessible from main Collections screen (pre-existing)
 
-### 9. **Zebra Label Printing (READY FOR IMPLEMENTATION)**
-- Generate ZPL (Zebra Programming Language) code for label printing
-- Labels include QR code, human-readable ID, and item description
-- Configurable label dimensions (width × height in inches)
-- Support for 203, 300, and 600 DPI printers
-- Print via network (IP address configuration in settings)
-- Company branding on labels
+### 9. **Zebra Label Printing (✅ FULLY IMPLEMENTED - Dec 3, 2025)**
+- **Network printing** - Send ZPL directly to Zebra printers over TCP/IP
+- **Configurable settings** - IP address, port, label size, and DPI in Settings screen
+- **Test label function** - Print test label with 5 DPI smaller frame to verify setup
+- **Individual printing** - Print label for any item from ItemDetailScreen
+- **Bulk printing** - Select multiple items and print all labels at once
+- **Progress feedback** - Loading states and success/failure alerts
+- **Label content** - Item title, ID, collection ID, condition, dimensions, value
+- **Multiple resolutions** - Support for 203, 300, and 600 DPI printers
+- **Default port 9100** - Standard Zebra printer port configuration
 
 ### 10. **Item Detail View (✅ ENHANCED)**
 - View all item photos in a grid layout
@@ -429,16 +456,69 @@ Access settings via the gear icon on the Collections screen. The settings page i
 - **Custom AI Prompt** - Tell the AI what to look for in photos
 - **Manual Trigger** - Analyze button available in photo note modal when AI is enabled
 
-### Zebra Label Printer Settings (Planned)
+### Zebra Label Printer Settings (✅ IMPLEMENTED - Dec 3, 2025)
 - **Enable/Disable Printer** - Toggle label printing functionality
 - **Printer IP Address** - Network address of Zebra printer
-- **Printer Port** - Default 9100
+- **Printer Port** - Default 9100 (standard Zebra port)
 - **Label Dimensions** - Width and height in inches (default 3x1)
 - **Printer DPI** - Resolution: 203, 300, or 600 DPI
+- **Test Label** - Print test label with frame to verify printer connection and settings
 
 ### General Settings
 - **Company Name** - Your organization name for reports
 - **Reset to Defaults** - Restore all settings to factory defaults
+
+## Zebra Label Printing
+
+### Overview
+The app now supports direct network printing to Zebra label printers using ZPL (Zebra Programming Language). Labels can be printed for individual items or in bulk.
+
+### Setup
+1. Navigate to **Settings** (gear icon on Collections screen)
+2. Scroll to **Zebra Label Printer** section
+3. Enable printer functionality
+4. Enter printer IP address (e.g., 192.168.1.100)
+5. Configure port (default: 9100)
+6. Set label dimensions in inches (default: 3" × 1")
+7. Select printer resolution (203, 300, or 600 DPI)
+8. Tap **Print Test Label** to verify connection
+
+### Printing Individual Labels
+1. Open any item in ItemDetailScreen
+2. Scroll to bottom and tap **Print Label** button
+3. Label will be sent directly to configured printer
+4. Success/failure alert will confirm status
+
+### Printing Bulk Labels
+1. Open any collection in CollectionDetailScreen
+2. Tap the **QR Code** button (bottom right)
+3. Selection mode activates with all items selected by default
+4. Deselect any items you don't want to print
+5. Tap **Labels (X)** button in action bar
+6. Labels will print sequentially with 200ms delay between prints
+7. Alert shows number of successful/failed prints
+
+### Label Content
+Each label includes:
+- Item title (first 25 characters)
+- Item ID (e.g., "A1234-01")
+- Collection ID (first 12 characters)
+- Condition rating
+- Dimensions (L×W×H with unit)
+- Estimated value with currency
+
+### Technical Details
+- **Protocol**: HTTP POST to printer IP:PORT
+- **Format**: ZPL code as plain text
+- **Network**: Requires printer on same network as device
+- **Error Handling**: Connection failures show user-friendly alerts
+- **Test Frame**: Test label prints with 5 DPI smaller frame for visual verification
+
+### Troubleshooting
+- **Connection Failed**: Verify printer IP address and network connectivity
+- **No Output**: Check printer is powered on and ready
+- **Partial Success**: First label prints but subsequent fail - printer may be busy
+- **Wrong Size**: Adjust label dimensions in settings to match physical labels
 
 ## AI Damage Detection
 

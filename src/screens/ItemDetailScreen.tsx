@@ -10,7 +10,7 @@ import { RootStackParamList } from "../navigation/RootNavigator";
 import { analyzeImageForDamage } from "../services/aiDamageDetection";
 import Breadcrumb from "../components/Breadcrumb";
 import ZoomableImage from "../components/ZoomableImage";
-import { shareItemZPL } from "../utils/zebraZPL";
+import { printItemLabel } from "../utils/zebraPrinter";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ItemDetail">;
@@ -25,6 +25,14 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const collection = useCollectionStore((s) => s.collections.find((c) => c.id === collectionId));
   const updateItem = useCollectionStore((s) => s.updateItem);
   const aiEnabled = useSettingsStore((s) => s.settings.aiEnabled);
+  const printerSettings = useSettingsStore((s) => ({
+    enabled: s.settings.printerEnabled,
+    ip: s.settings.printerIp,
+    port: s.settings.printerPort,
+    width: s.settings.labelWidth,
+    height: s.settings.labelHeight,
+    dpi: s.settings.printerDpi,
+  }));
 
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -33,6 +41,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<Set<number>>(new Set());
   const [zoomImageUri, setZoomImageUri] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   if (!item) {
     return (
@@ -45,6 +54,48 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
       </View>
     );
   }
+
+  const handlePrintLabel = async () => {
+    if (!printerSettings.enabled) {
+      Alert.alert(
+        "Printer Not Configured",
+        "Please enable and configure the Zebra printer in Settings first.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Settings", onPress: () => navigation.navigate("Settings") },
+        ]
+      );
+      return;
+    }
+
+    if (!printerSettings.ip) {
+      Alert.alert(
+        "Printer IP Required",
+        "Please set the printer IP address in Settings.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Settings", onPress: () => navigation.navigate("Settings") },
+        ]
+      );
+      return;
+    }
+
+    setIsPrinting(true);
+    const success = await printItemLabel(
+      item,
+      collectionId,
+      printerSettings.ip,
+      printerSettings.port,
+      printerSettings.width,
+      printerSettings.height,
+      printerSettings.dpi
+    );
+    setIsPrinting(false);
+
+    if (success) {
+      Alert.alert("Label Printed", `Label for "${item.title}" has been sent to the printer.`);
+    }
+  };
 
   const openNoteModal = (index: number) => {
     setSelectedPhotoIndex(index);
@@ -150,10 +201,15 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
           </View>
           <View className="flex-row items-center gap-2">
             <Pressable
-              onPress={() => shareItemZPL(item, collectionId)}
+              onPress={handlePrintLabel}
+              disabled={isPrinting}
               className="w-10 h-10 items-center justify-center active:opacity-70"
             >
-              <Ionicons name="barcode-outline" size={28} color="#2563EB" />
+              <Ionicons
+                name={isPrinting ? "hourglass-outline" : "barcode-outline"}
+                size={28}
+                color={isPrinting ? "#9CA3AF" : "#2563EB"}
+              />
             </Pressable>
             <Pressable
               onPress={() => navigation.navigate("Customers")}

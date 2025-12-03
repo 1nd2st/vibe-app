@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, Pressable, Alert, Modal, Image } from "react-native";
+import { View, Text, FlatList, Pressable, Alert, Modal, Image, ActivityIndicator } from "react-native";
 import { useCollectionStore } from "../state/collectionStore";
 import { useUndoStore } from "../state/undoStore";
+import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { emailCollectionReport, shareCollectionReport } from "../utils/collectionReports";
+import { printMultipleItemLabels } from "../utils/zebraPrinter";
 import Breadcrumb from "../components/Breadcrumb";
 import SwipeableItem from "../components/SwipeableItem";
 import * as ContextMenu from "zeego/context-menu";
@@ -35,10 +37,20 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
   const getLastUndo = useUndoStore((s) => s.getLastUndo);
   const removeLastUndo = useUndoStore((s) => s.removeLastUndo);
 
+  const printerSettings = useSettingsStore((s) => ({
+    enabled: s.settings.printerEnabled,
+    ip: s.settings.printerIp,
+    port: s.settings.printerPort,
+    width: s.settings.labelWidth,
+    height: s.settings.labelHeight,
+    dpi: s.settings.printerDpi,
+  }));
+
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showUndoToast, setShowUndoToast] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isPrintingLabels, setIsPrintingLabels] = useState(false);
 
   if (!collection) {
     return (
@@ -130,6 +142,73 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     });
     setSelectionMode(false);
     setSelectedItems(new Set());
+  };
+
+  const handlePrintLabels = async () => {
+    if (selectedItems.size === 0) {
+      Alert.alert("No Items Selected", "Please select at least one item to print labels.");
+      return;
+    }
+
+    if (!printerSettings.enabled) {
+      Alert.alert(
+        "Printer Not Configured",
+        "Please enable and configure the printer in Settings first.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Settings", onPress: () => navigation.navigate("Settings") },
+        ]
+      );
+      return;
+    }
+
+    if (!printerSettings.ip) {
+      Alert.alert(
+        "Printer IP Required",
+        "Please configure the printer IP address in Settings.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Settings", onPress: () => navigation.navigate("Settings") },
+        ]
+      );
+      return;
+    }
+
+    // Get the selected items
+    const itemsToPrint = collection.items.filter(item => selectedItems.has(item.id));
+
+    setIsPrintingLabels(true);
+    const result = await printMultipleItemLabels(
+      itemsToPrint,
+      collectionId,
+      printerSettings.ip,
+      printerSettings.port,
+      printerSettings.width,
+      printerSettings.height,
+      printerSettings.dpi
+    );
+    setIsPrintingLabels(false);
+
+    if (result.success > 0) {
+      if (result.failed === 0) {
+        Alert.alert(
+          "Labels Printed",
+          `Successfully printed ${result.success} label${result.success !== 1 ? "s" : ""}.`
+        );
+        setSelectionMode(false);
+        setSelectedItems(new Set());
+      } else {
+        Alert.alert(
+          "Partial Success",
+          `Printed ${result.success} label${result.success !== 1 ? "s" : ""}, but ${result.failed} failed. Please check the printer connection.`
+        );
+      }
+    } else {
+      Alert.alert(
+        "Print Failed",
+        `Could not print labels. Please check the printer connection and try again.`
+      );
+    }
   };
 
   const handleDeleteItem = (itemId: string, itemTitle: string) => {
@@ -633,20 +712,46 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
             </Pressable>
           </View>
 
-          <Pressable
-            onPress={handlePrintQRCodes}
-            disabled={selectedItems.size === 0}
-            className={`rounded-xl py-3 items-center flex-row justify-center ${
-              selectedItems.size > 0
-                ? "bg-blue-600 active:bg-blue-700"
-                : "bg-gray-300"
-            }`}
-          >
-            <Ionicons name="qr-code" size={20} color="#FFFFFF" />
-            <Text className="text-white text-base font-semibold ml-2">
-              Print QR Codes ({selectedItems.size})
-            </Text>
-          </Pressable>
+          <View className="flex-row gap-2">
+            <Pressable
+              onPress={handlePrintLabels}
+              disabled={selectedItems.size === 0 || isPrintingLabels}
+              className={`flex-1 rounded-xl py-3 items-center flex-row justify-center ${
+                selectedItems.size > 0 && !isPrintingLabels
+                  ? "bg-green-600 active:bg-green-700"
+                  : "bg-gray-300"
+              }`}
+            >
+              {isPrintingLabels ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text className="text-white text-base font-semibold ml-2">Printing...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="print" size={20} color="#FFFFFF" />
+                  <Text className="text-white text-base font-semibold ml-2">
+                    Labels ({selectedItems.size})
+                  </Text>
+                </>
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={handlePrintQRCodes}
+              disabled={selectedItems.size === 0}
+              className={`flex-1 rounded-xl py-3 items-center flex-row justify-center ${
+                selectedItems.size > 0
+                  ? "bg-blue-600 active:bg-blue-700"
+                  : "bg-gray-300"
+              }`}
+            >
+              <Ionicons name="qr-code" size={20} color="#FFFFFF" />
+              <Text className="text-white text-base font-semibold ml-2">
+                QR Codes ({selectedItems.size})
+              </Text>
+            </Pressable>
+          </View>
         </View>
       )}
 

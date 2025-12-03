@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, Switch, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView, Switch, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/RootNavigator";
+import { printTestLabel } from "../utils/zebraPrinter";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Settings">;
@@ -27,6 +28,32 @@ export default function SettingsScreen({ navigation }: Props) {
   const [printerDpi, setPrinterDpi] = useState(settings.printerDpi);
 
   const [companyName, setCompanyName] = useState(settings.companyName);
+  const [isPrintingTest, setIsPrintingTest] = useState(false);
+
+  const handleTestLabel = async () => {
+    if (!printerIp.trim()) {
+      Alert.alert("Printer IP Required", "Please enter the printer IP address first.");
+      return;
+    }
+
+    setIsPrintingTest(true);
+    const success = await printTestLabel(
+      printerIp.trim(),
+      parseInt(printerPort) || 9100,
+      parseFloat(labelWidth) || 3,
+      parseFloat(labelHeight) || 1,
+      printerDpi
+    );
+
+    setIsPrintingTest(false);
+
+    if (success) {
+      Alert.alert(
+        "Test Label Sent",
+        "A test label has been sent to the printer. Check if it printed correctly.\n\nThe test label includes:\n• Label size and resolution info\n• Border frame (5 DPI smaller)\n• Current label dimensions"
+      );
+    }
+  };
 
   const handleSave = () => {
     updateSettings({
@@ -281,6 +308,40 @@ export default function SettingsScreen({ navigation }: Props) {
                     </Text>
                   </Pressable>
                 ))}
+              </View>
+
+              {/* Test Label Button */}
+              <Pressable
+                onPress={handleTestLabel}
+                disabled={isPrintingTest || !printerIp.trim()}
+                className={`mt-4 rounded-xl py-4 items-center flex-row justify-center border-2 ${
+                  isPrintingTest || !printerIp.trim()
+                    ? "bg-gray-100 border-gray-300"
+                    : "bg-green-50 border-green-600 active:bg-green-100"
+                }`}
+              >
+                {isPrintingTest ? (
+                  <>
+                    <ActivityIndicator size="small" color="#16A34A" />
+                    <Text className="text-green-700 text-base font-semibold ml-2">Printing Test...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="print-outline" size={20} color={printerIp.trim() ? "#16A34A" : "#9CA3AF"} />
+                    <Text className={`text-base font-semibold ml-2 ${printerIp.trim() ? "text-green-700" : "text-gray-400"}`}>
+                      Print Test Label
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+
+              <View className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-4">
+                <Text className="text-amber-900 text-xs font-medium mb-1">Test Label Info:</Text>
+                <Text className="text-amber-800 text-xs">
+                  • Prints with 5 DPI border frame{"\n"}
+                  • Shows label dimensions and resolution{"\n"}
+                  • Verifies printer connectivity
+                </Text>
               </View>
             </>
           )}
