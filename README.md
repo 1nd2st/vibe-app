@@ -33,7 +33,10 @@ This project is configured to run entirely in Expo Go without any native builds:
 
 - ✅ **Camera & Barcode Scanning**: Uses `expo-camera` (Expo Go compatible)
 - ✅ **Storage**: Uses `@react-native-async-storage/async-storage` and `expo-secure-store` (Expo Go compatible)
+- ✅ **Animations**: Uses `react-native-reanimated` v3 with `react-native-worklets-core` (Expo Go compatible)
 - ✅ **All Features Work**: Camera, QR scanning, photo capture, database, networking - all supported in Expo Go
+
+**Note:** A postinstall script automatically creates a compatibility shim for `react-native-worklets` to work with NativeWind's requirements.
 
 ### 🔧 What Was Removed
 
