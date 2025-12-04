@@ -1,3 +1,21 @@
+// {
+//   "expo": {
+//     "name": "vibecode",
+//     "slug": "vibecode",
+//     "scheme": "vibecode",
+//     "version": "1.0.0",
+//     "orientation": "portrait",
+//     "userInterfaceStyle": "light",
+//     "newArchEnabled": true,
+//     "ios": {
+//       "supportsTablet": true
+//     },
+//     "android": {
+//       "edgeToEdgeEnabled": true
+//     }
+//   }
+// }
+
 {
   "expo": {
     "name": "vibecode",
@@ -8,10 +26,15 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ind2st.vibecode"
     },
     "android": {
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.ind2st.vibecode"
     }
   }
 }
+
+
+
