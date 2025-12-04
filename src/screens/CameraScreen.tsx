@@ -271,7 +271,7 @@ export default function CameraScreen({ navigation, route }: Props) {
               </View>
 
               <Pressable
-                onPress={() => navigation.navigate("Customers")}
+                onPress={() => navigation.navigate("Home" as any)}
                 className="w-10 h-10 rounded-full bg-black/50 items-center justify-center active:bg-black/70"
               >
                 <Ionicons name="home-outline" size={24} color="#FFFFFF" />

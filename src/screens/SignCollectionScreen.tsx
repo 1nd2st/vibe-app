@@ -56,12 +56,9 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
     loadData();
   }, [collectionId]);
 
-  // Calculate total value
+  // Calculate total value - NO currency conversion, just sum what's in the database
   const totalValue = collection?.items.reduce((sum, item) => {
-    const valueInUSD = item.currency === "USD" ? item.estimatedValue :
-                       item.currency === "EUR" ? item.estimatedValue * 1.1 :
-                       item.estimatedValue * 1.25;
-    return sum + valueInUSD;
+    return sum + (item.estimatedValue || 0);
   }, 0) || 0;
 
   // Use shared values for gesture handling
@@ -180,7 +177,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
           },
           {
             text: "Go to Home",
-            onPress: () => navigation.navigate("Customers"),
+            onPress: () => navigation.navigate("Home" as any),
           },
         ]
       );
@@ -204,7 +201,7 @@ export default function SignCollectionScreen({ navigation, route }: Props) {
             </View>
           </View>
           <Pressable
-            onPress={() => navigation.navigate("Customers")}
+            onPress={() => navigation.navigate("Home" as any)}
             className="ml-2 active:opacity-70"
           >
             <Ionicons name="home-outline" size={24} color="#2563EB" />

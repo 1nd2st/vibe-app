@@ -16,7 +16,43 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
-### **Latest Updates** (Dec 3, 2025)
+### **Latest Updates** (Dec 4, 2025)
+- ✅ **CRITICAL FIX: "Mark as Completed" Button Now Works!**
+  - Fixed bug where clicking "Mark as Completed" did nothing
+  - Root cause: handleCompleteCollection() didn't reload collection data after updating status
+  - Solution: Made function async and added `await loadCollection()` after status update
+  - UI now immediately refreshes to show updated progress bar and "Get Signature" button
+  - Also fixed status revert (clicking Step 2 to add more items) not refreshing
+  - Also fixed "Complete Now" shortcut in signature flow not updating properly
+- ✅ **COMPLETE: Home Navigation Fixed on ALL Screens**
+  - Every screen in collection workflow now has Home button
+  - All Home buttons navigate to actual Home screen (not Customers screen)
+  - Fixed 8 screens: CollectionDetail, AddItem, Camera, SignCollection, ItemDetail, PhotoAnnotation, QRCodeDisplay, NewCollection
+  - Users can now escape from any deep screen directly to Home
+- ✅ **REMOVED: Unwanted Currency Conversion**
+  - Removed EUR/GBP to USD conversion logic from SignCollectionScreen
+  - Collection summary now shows correct totals without any conversion
+  - Just sums values as-is from database (per user's explicit request)
+- ✅ **COMPLETE: PDF Report Generation**
+  - Installed expo-print@15.0.7
+  - Created comprehensive PDF generator with styling
+  - PDF includes: header, summary, all items with photos, signature
+  - Added to export menu in CollectionDetail screen
+  - Uses expo-sharing for native share sheet
+- ✅ **COMPLETE: Collection Summary & Data Quality**
+  - Created buildCollectionSummary() utility function
+  - Calculates totals: items, photos, value, weight (lb/kg), volume (ft³/m³)
+  - Tracks data quality: items missing dimensions, weight, photos, value
+  - Imperial units primary, metric secondary
+  - No currency conversion - just sums what's in database
+  - Fixed volume calculation bug (calculate in original units first, then convert)
+- ✅ **COMPLETE: Email Report with Photo Attachments**
+  - Updated email report to use expo-mail-composer attachments parameter
+  - All item photos attached as files (viewable in Outlook/Gmail on desktop)
+  - Integrated collection summary into email body
+  - Pre-fills customer email if available
+
+### **Previous Updates** (Dec 3, 2025)
 - ✅ **FIXED: ItemHistory Schema Bug** - Database migration corrected
   - Fixed inconsistent column name in ItemHistory table (action → action_type)
   - Migration 7 automatically repairs existing databases

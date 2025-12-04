@@ -231,7 +231,7 @@ export default function PhotoAnnotationScreen({ navigation, route }: Props) {
           <Text className="text-white text-lg font-semibold">Annotate Photo</Text>
           <View className="flex-row items-center">
             <Pressable
-              onPress={() => navigation.navigate("Customers")}
+              onPress={() => navigation.navigate("Home" as any)}
               className="mr-4 active:opacity-70"
             >
               <Ionicons name="home-outline" size={24} color="#FFFFFF" />

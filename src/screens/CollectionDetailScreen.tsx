@@ -80,15 +80,16 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  const handleCompleteCollection = () => {
+  const handleCompleteCollection = async () => {
     if (collection.items.length === 0) {
       Alert.alert("No Items", "Please add at least one item before completing the collection.");
       return;
     }
-    updateCollection(collectionId, { status: "completed" });
+    await updateCollection(collectionId, { status: "completed" });
+    await loadCollection(); // Reload to refresh UI
   };
 
-  const handleSignCollection = () => {
+  const handleSignCollection = async () => {
     if (collection.items.length === 0) {
       Alert.alert("No Items", "Please add at least one item before getting signature.");
       return;
@@ -101,8 +102,9 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           { text: "Cancel", style: "cancel" },
           {
             text: "Complete Now",
-            onPress: () => {
-              updateCollection(collectionId, { status: "completed" });
+            onPress: async () => {
+              await updateCollection(collectionId, { status: "completed" });
+              await loadCollection(); // Reload to refresh UI
               navigation.navigate("SignCollection", { collectionId });
             },
           },
@@ -278,7 +280,7 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
 
   const currentStep = getCurrentStep();
 
-  const handleStepClick = (stepNumber: number) => {
+  const handleStepClick = async (stepNumber: number) => {
     if (collection.status === "signed") return; // Can't navigate if signed
 
     // Allow clicking on Step 2 (Add Items) to revert from completed back to in_progress
@@ -290,8 +292,9 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           { text: "Cancel", style: "cancel" },
           {
             text: "Yes, Add More Items",
-            onPress: () => {
-              updateCollection(collectionId, { status: "in_progress" });
+            onPress: async () => {
+              await updateCollection(collectionId, { status: "in_progress" });
+              await loadCollection(); // Reload to refresh UI
             },
           },
         ]

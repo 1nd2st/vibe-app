@@ -269,7 +269,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
               />
             </Pressable>
             <Pressable
-              onPress={() => navigation.navigate("Customers")}
+              onPress={() => navigation.navigate("Home" as any)}
               className="w-10 h-10 items-center justify-center active:opacity-70"
             >
               <Ionicons name="home-outline" size={24} color="#2563EB" />

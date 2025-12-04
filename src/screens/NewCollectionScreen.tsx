@@ -119,7 +119,7 @@ export default function NewCollectionScreen({ navigation, route }: Props) {
           </View>
         </View>
         <Pressable
-          onPress={() => navigation.navigate("Customers")}
+          onPress={() => navigation.navigate("Home" as any)}
           className="ml-2 active:opacity-70"
         >
           <Ionicons name="home-outline" size={24} color="#2563EB" />
