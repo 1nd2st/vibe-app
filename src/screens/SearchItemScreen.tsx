@@ -82,7 +82,10 @@ export default function SearchItemScreen({ navigation }: Props) {
           <Pressable onPress={() => navigation.goBack()} className="mr-4 p-2 -ml-2">
             <Ionicons name="arrow-back" size={24} color="#374151" />
           </Pressable>
-          <Text className="text-2xl font-bold text-gray-900">Search Items</Text>
+          <Text className="text-2xl font-bold text-gray-900 flex-1">Search Items</Text>
+          <Pressable onPress={() => (navigation as any).navigate("Home")} className="p-2 active:opacity-70">
+            <Ionicons name="home-outline" size={24} color="#2563EB" />
+          </Pressable>
         </View>
 
         {/* Search Input */}

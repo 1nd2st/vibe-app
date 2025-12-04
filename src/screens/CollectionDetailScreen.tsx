@@ -8,6 +8,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import { emailCollectionReport, shareCollectionReport } from "../utils/collectionReports";
+import { generateAndSharePDF } from "../utils/pdfReport";
 import { printMultipleItemLabels } from "../utils/zebraPrinter";
 import Breadcrumb from "../components/Breadcrumb";
 import SwipeableItem from "../components/SwipeableItem";
@@ -403,6 +404,12 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
             className="mr-3 active:opacity-70"
           >
             <Ionicons name="share-outline" size={24} color="#2563EB" />
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate("Home" as any)}
+            className="mr-3 active:opacity-70"
+          >
+            <Ionicons name="home-outline" size={24} color="#2563EB" />
           </Pressable>
           {collection.status === "signed" && (
             <View className="flex-row items-center bg-green-100 px-3 py-1.5 rounded-full">
@@ -905,6 +912,23 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
                 <View className="flex-1">
                   <Text className="text-base font-semibold text-gray-900">Email Report</Text>
                   <Text className="text-sm text-gray-600">Send collection details via email</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </Pressable>
+
+              <Pressable
+                onPress={async () => {
+                  setShowExportMenu(false);
+                  await generateAndSharePDF(collection);
+                }}
+                className="flex-row items-center p-4 bg-red-50 rounded-xl mb-3 active:bg-red-100"
+              >
+                <View className="w-12 h-12 bg-red-600 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="document-text-outline" size={24} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-gray-900">PDF Report</Text>
+                  <Text className="text-sm text-gray-600">Generate and share PDF document</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
               </Pressable>
