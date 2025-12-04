@@ -2,6 +2,51 @@
 
 A comprehensive mobile application for art moving companies and warehouse operations, combining professional collection documentation with full inventory management capabilities - all in one powerful app.
 
+---
+
+## 🚀 Quick Start (Expo Go Compatible)
+
+This app is **fully compatible with Expo Go** - no custom dev client or native builds required!
+
+### Running the App
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   # or
+   bun install
+   ```
+
+2. **Start the development server:**
+   ```bash
+   npx expo start
+   ```
+
+3. **Open in Expo Go:**
+   - **iOS**: Scan the QR code with your iPhone camera
+   - **Android**: Scan the QR code with the Expo Go app
+   - **Android Scanner Device**: Open Expo Go and scan the QR code
+
+### ✅ Expo Go Compatibility
+
+This project is configured to run entirely in Expo Go without any native builds:
+
+- ✅ **Camera & Barcode Scanning**: Uses `expo-camera` (Expo Go compatible)
+- ✅ **Storage**: Uses `@react-native-async-storage/async-storage` and `expo-secure-store` (Expo Go compatible)
+- ✅ **All Features Work**: Camera, QR scanning, photo capture, database, networking - all supported in Expo Go
+
+### 🔧 What Was Removed
+
+The following libraries required custom dev clients and have been removed:
+- ❌ `react-native-vision-camera` → Replaced with `expo-camera`
+- ❌ `react-native-mmkv` → Already using AsyncStorage
+- ❌ `react-native-keyboard-controller` → Using native KeyboardAvoidingView
+- ❌ `react-native-maps` → Not currently used
+- ❌ `expo-dev-client` → Not needed for Expo Go
+- ❌ `expo-build-properties` → Not needed for Expo Go
+
+---
+
 ## 🎯 Dual-Purpose Application
 
 This app serves two main functions:
