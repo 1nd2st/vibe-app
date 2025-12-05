@@ -31,6 +31,15 @@ export default function SettingsScreen({ navigation }: Props) {
   const [labelHeight, setLabelHeight] = useState(settings.labelHeight.toString());
   const [printerDpi, setPrinterDpi] = useState(settings.printerDpi);
 
+  const [smtpEnabled, setSmtpEnabled] = useState(settings.smtpEnabled);
+  const [smtpHost, setSmtpHost] = useState(settings.smtpHost || "");
+  const [smtpPort, setSmtpPort] = useState(settings.smtpPort.toString());
+  const [smtpSecure, setSmtpSecure] = useState(settings.smtpSecure);
+  const [smtpUsername, setSmtpUsername] = useState(settings.smtpUsername || "");
+  const [smtpPassword, setSmtpPassword] = useState(settings.smtpPassword || "");
+  const [smtpFromEmail, setSmtpFromEmail] = useState(settings.smtpFromEmail || "");
+  const [smtpFromName, setSmtpFromName] = useState(settings.smtpFromName || "");
+
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [isPrintingTest, setIsPrintingTest] = useState(false);
 
@@ -71,6 +80,14 @@ export default function SettingsScreen({ navigation }: Props) {
       labelWidth: parseFloat(labelWidth) || 3,
       labelHeight: parseFloat(labelHeight) || 1,
       printerDpi,
+      smtpEnabled,
+      smtpHost: smtpHost || undefined,
+      smtpPort: parseInt(smtpPort) || 587,
+      smtpSecure,
+      smtpUsername: smtpUsername || undefined,
+      smtpPassword: smtpPassword || undefined,
+      smtpFromEmail: smtpFromEmail || undefined,
+      smtpFromName: smtpFromName || undefined,
       companyName,
     });
     Alert.alert("Settings Saved", "Your settings have been saved successfully.");
@@ -98,6 +115,14 @@ export default function SettingsScreen({ navigation }: Props) {
             setLabelWidth("3");
             setLabelHeight("1");
             setPrinterDpi(203);
+            setSmtpEnabled(false);
+            setSmtpHost("");
+            setSmtpPort("587");
+            setSmtpSecure(true);
+            setSmtpUsername("");
+            setSmtpPassword("");
+            setSmtpFromEmail("");
+            setSmtpFromName("");
             setCompanyName("Art Logistics");
             Alert.alert("Settings Reset", "All settings have been reset to default values.");
           },
@@ -446,6 +471,122 @@ export default function SettingsScreen({ navigation }: Props) {
                   • Shows label dimensions and resolution{"\n"}
                   • Verifies printer connectivity
                 </Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* SMTP Email Configuration */}
+        <View className="bg-white rounded-2xl p-4 mb-4">
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-1">
+              <Text className="text-lg font-semibold text-gray-900">SMTP Email Server</Text>
+              <Text className="text-sm text-gray-600 mt-1">
+                Configure custom email server for sending reports
+              </Text>
+            </View>
+            <Switch
+              value={smtpEnabled}
+              onValueChange={setSmtpEnabled}
+              trackColor={{ false: "#D1D5DB", true: "#3B82F6" }}
+              thumbColor={smtpEnabled ? "#FFFFFF" : "#F3F4F6"}
+            />
+          </View>
+
+          {smtpEnabled && (
+            <>
+              <Text className="text-sm font-medium text-gray-700 mb-2">SMTP Host</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                placeholder="smtp.gmail.com"
+                placeholderTextColor="#9CA3AF"
+                value={smtpHost}
+                onChangeText={setSmtpHost}
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+
+              <View className="flex-row gap-3 mb-4">
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">Port</Text>
+                  <TextInput
+                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900"
+                    placeholder="587"
+                    placeholderTextColor="#9CA3AF"
+                    value={smtpPort}
+                    onChangeText={setSmtpPort}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View className="flex-1 justify-end">
+                  <View className="flex-row items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <Text className="text-sm font-medium text-gray-700">Use TLS/SSL</Text>
+                    <Switch
+                      value={smtpSecure}
+                      onValueChange={setSmtpSecure}
+                      trackColor={{ false: "#D1D5DB", true: "#3B82F6" }}
+                      thumbColor={smtpSecure ? "#FFFFFF" : "#F3F4F6"}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <Text className="text-sm font-medium text-gray-700 mb-2">Username (Email)</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                placeholder="your-email@example.com"
+                placeholderTextColor="#9CA3AF"
+                value={smtpUsername}
+                onChangeText={setSmtpUsername}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+
+              <Text className="text-sm font-medium text-gray-700 mb-2">Password / App Password</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                placeholder="••••••••"
+                placeholderTextColor="#9CA3AF"
+                value={smtpPassword}
+                onChangeText={setSmtpPassword}
+                secureTextEntry
+              />
+
+              <Text className="text-sm font-medium text-gray-700 mb-2">From Email</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                placeholder="noreply@yourcompany.com"
+                placeholderTextColor="#9CA3AF"
+                value={smtpFromEmail}
+                onChangeText={setSmtpFromEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+
+              <Text className="text-sm font-medium text-gray-700 mb-2">From Name</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-900 mb-4"
+                placeholder="Your Company Name"
+                placeholderTextColor="#9CA3AF"
+                value={smtpFromName}
+                onChangeText={setSmtpFromName}
+              />
+
+              <View className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <View className="flex-row items-start">
+                  <Ionicons name="information-circle" size={20} color="#2563EB" style={{ marginRight: 8, marginTop: 2 }} />
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-blue-900 mb-1">
+                      SMTP Configuration Tips
+                    </Text>
+                    <Text className="text-xs text-blue-700 leading-5">
+                      • Gmail: Use app-specific password (not your regular password){"\n"}
+                      • Port 587 for TLS, 465 for SSL, 25 for unencrypted{"\n"}
+                      • Test by sending a report after saving{"\n"}
+                      • If disabled, device native email will be used
+                    </Text>
+                  </View>
+                </View>
               </View>
             </>
           )}

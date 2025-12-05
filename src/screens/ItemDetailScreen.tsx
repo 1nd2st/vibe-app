@@ -285,11 +285,11 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     if (isAdmin && photo.source === "collection_flow" && photo.isLocked) {
       Alert.alert(
         "⚠️ Delete Collection Photo?",
-        "This photo was taken during collection and was included when the customer signed the documentation.\n\nAre you sure you want to delete this photo?",
+        "This photo was taken during collection. Customer signed the document with this photo included.\n\nDeleting this photo will remove it from the permanent record. This action cannot be undone.\n\nAre you absolutely sure you want to delete this photo?",
         [
           { text: "Cancel", style: "cancel" },
           {
-            text: "Delete Anyway",
+            text: "Yes, Delete Photo",
             style: "destructive",
             onPress: async () => {
               try {

@@ -65,6 +65,26 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 6, 2025)
+- ✅ **NEW: SMTP Email Configuration** - Custom email server support
+  - Configure SMTP settings in Settings (host, port, authentication)
+  - Support for TLS/SSL encryption
+  - Gmail app password support with configuration tips
+  - Falls back to device native email when disabled
+- ✅ **NEW: Permission Presets & Management UI**
+  - Visual permission presets (Administrator, Field Worker, Warehouse Worker, Viewer, Full User)
+  - Permission groups organized by feature (Collections, Items, Photos, Inventory, Locations, Admin)
+  - Shield icon in User Management to view all permissions
+  - Clear role-based access control documentation
+- ✅ **ENHANCED: Photo Note Editing with Full Audit Trail**
+  - Shows both original note (before edit) and edited note
+  - Displays edit timestamp and warning when note edited after signature
+  - Preserves original signed notes for legal compliance
+  - Full trace in PhotoViewerModal with amber/gray color coding
+- ✅ **ENHANCED: Admin Photo Deletion Confirmation**
+  - Stronger warning dialog for admins deleting collection photos
+  - Explicitly states "Customer signed the document with this photo included"
+  - Clear confirmation that action cannot be undone
+  - Separate gentle confirmation for added_later photos
 - ✅ **FIXED: Camera Photo GPS Schema Error** - Migration v10 applied
   - Fixed "table ItemPhoto has no column named latitude" error
   - Added migration v10 to add GPS coordinates (latitude, longitude) to ItemPhoto table

@@ -24,6 +24,7 @@ import {
   type User,
 } from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
+import { PERMISSION_PRESETS, PERMISSION_GROUPS } from "../types/permissions";
 
 type Props = NativeStackScreenProps<HomeStackParamList, "UserManagement">;
 
@@ -32,6 +33,7 @@ export default function UserManagementScreen({ navigation }: Props) {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newUserRole, setNewUserRole] = useState<"user" | "admin">("user");
   const [isCreating, setIsCreating] = useState(false);
@@ -179,9 +181,14 @@ export default function UserManagementScreen({ navigation }: Props) {
             </Pressable>
             <Text className="text-2xl font-bold text-gray-900">User Management</Text>
           </View>
-          <Pressable onPress={() => setShowAddModal(true)} className="p-2">
-            <Ionicons name="add-circle" size={28} color="#2563EB" />
-          </Pressable>
+          <View className="flex-row items-center">
+            <Pressable onPress={() => setShowPermissionsModal(true)} className="p-2 mr-1">
+              <Ionicons name="shield-checkmark-outline" size={26} color="#7C3AED" />
+            </Pressable>
+            <Pressable onPress={() => setShowAddModal(true)} className="p-2">
+              <Ionicons name="add-circle" size={28} color="#2563EB" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -323,6 +330,132 @@ export default function UserManagementScreen({ navigation }: Props) {
               )}
             </Pressable>
           </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Permission Presets Modal */}
+      <Modal visible={showPermissionsModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView className="flex-1 bg-white">
+          <View className="px-6 py-4 border-b border-gray-200">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-gray-900">Permission Presets</Text>
+              <Pressable onPress={() => setShowPermissionsModal(false)}>
+                <Ionicons name="close" size={28} color="#374151" />
+              </Pressable>
+            </View>
+          </View>
+
+          <ScrollView className="flex-1 px-6 py-6">
+            <View className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+              <View className="flex-row items-start">
+                <Ionicons name="information-circle" size={24} color="#7C3AED" style={{ marginRight: 8 }} />
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-purple-900 mb-1">
+                    About Permission Presets
+                  </Text>
+                  <Text className="text-xs text-purple-700 leading-5">
+                    These presets define what users can do in the app. Admins always have full access. Users can be assigned different presets based on their role.
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Permission Presets */}
+            {PERMISSION_PRESETS.map((preset) => (
+              <View key={preset.id} className="bg-white rounded-xl p-4 border border-gray-200 mb-4">
+                <View className="flex-row items-start justify-between mb-3">
+                  <View className="flex-1">
+                    <Text className="text-lg font-bold text-gray-900">{preset.name}</Text>
+                    <Text className="text-sm text-gray-600 mt-1">{preset.description}</Text>
+                  </View>
+                  <View className={`px-3 py-1 rounded-full ${
+                    preset.role === "admin" ? "bg-purple-100" :
+                    preset.role === "viewer" ? "bg-gray-100" :
+                    "bg-blue-100"
+                  }`}>
+                    <Text className={`text-xs font-semibold ${
+                      preset.role === "admin" ? "text-purple-900" :
+                      preset.role === "viewer" ? "text-gray-700" :
+                      "text-blue-900"
+                    }`}>
+                      {preset.role}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Permission Groups */}
+                <View className="mt-3 pt-3 border-t border-gray-100">
+                  <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Permission Groups
+                  </Text>
+                  {preset.groups.map((group) => (
+                    <View key={group.id} className="mb-3">
+                      <View className="flex-row items-center mb-1">
+                        <Ionicons
+                          name={
+                            group.id === "collections" ? "folder-outline" :
+                            group.id === "items" ? "cube-outline" :
+                            group.id === "photos" ? "camera-outline" :
+                            group.id === "inventory" ? "qr-code-outline" :
+                            group.id === "locations" ? "location-outline" :
+                            "shield-checkmark-outline"
+                          }
+                          size={16}
+                          color="#6B7280"
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text className="text-sm font-semibold text-gray-900">{group.name}</Text>
+                      </View>
+                      <View className="flex-row flex-wrap ml-6">
+                        {group.permissions.map((perm) => (
+                          <View key={perm} className="bg-gray-100 rounded px-2 py-1 mr-2 mb-1">
+                            <Text className="text-xs text-gray-700">
+                              {perm.split(".")[1].replace("_", " ")}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+
+            {/* All Permission Groups Reference */}
+            <View className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-4">
+              <Text className="text-sm font-bold text-gray-900 mb-3">All Permission Groups</Text>
+              {PERMISSION_GROUPS.map((group) => (
+                <View key={group.id} className="mb-3 pb-3 border-b border-gray-200 last:border-b-0">
+                  <View className="flex-row items-start mb-2">
+                    <Ionicons
+                      name={
+                        group.id === "collections" ? "folder" :
+                        group.id === "items" ? "cube" :
+                        group.id === "photos" ? "camera" :
+                        group.id === "inventory" ? "qr-code" :
+                        group.id === "locations" ? "location" :
+                        "shield-checkmark"
+                      }
+                      size={18}
+                      color="#2563EB"
+                      style={{ marginRight: 8, marginTop: 2 }}
+                    />
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-gray-900">{group.name}</Text>
+                      <Text className="text-xs text-gray-600 mt-1">{group.description}</Text>
+                    </View>
+                  </View>
+                  <View className="flex-row flex-wrap ml-7">
+                    {group.permissions.map((perm) => (
+                      <View key={perm} className="bg-white border border-gray-300 rounded px-2 py-1 mr-2 mb-1">
+                        <Text className="text-xs text-gray-700">{perm}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

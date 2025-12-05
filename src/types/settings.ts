@@ -13,6 +13,16 @@ export interface AppSettings {
   labelHeight: number; // in inches
   printerDpi: 203 | 300 | 600;
 
+  // SMTP Email Configuration
+  smtpEnabled: boolean;
+  smtpHost?: string;
+  smtpPort: number;
+  smtpSecure: boolean; // Use TLS/SSL
+  smtpUsername?: string;
+  smtpPassword?: string;
+  smtpFromEmail?: string;
+  smtpFromName?: string;
+
   // General
   companyName: string;
   companyLogo?: string;
@@ -29,6 +39,10 @@ export const defaultSettings: AppSettings = {
   labelWidth: 3,
   labelHeight: 1,
   printerDpi: 203,
+
+  smtpEnabled: false,
+  smtpPort: 587,
+  smtpSecure: true,
 
   companyName: "Art Logistics",
 };
