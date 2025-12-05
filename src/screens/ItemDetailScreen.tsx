@@ -166,13 +166,29 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     if (selectedPhotoIndex !== null && item) {
       const photo = item.photos[selectedPhotoIndex];
       try {
-        await updateCollectionItemPhoto(photo.id, {
+        const updateData: any = {
           conditionNotes: noteText.trim(),
-        });
+        };
+
+        // If collection is locked and this is an edit (not first note), preserve original
+        if (collectionIsLocked && photo.conditionNotes && !photo.originalNote) {
+          updateData.originalNote = photo.conditionNotes;
+          updateData.noteEditedAt = new Date().toISOString();
+          updateData.noteEditedBy = user?.id || null;
+        } else if (collectionIsLocked && photo.originalNote) {
+          // Already has original note, just update timestamp
+          updateData.noteEditedAt = new Date().toISOString();
+          updateData.noteEditedBy = user?.id || null;
+        }
+
+        await updateCollectionItemPhoto(photo.id, updateData);
 
         // Log to ItemHistory
         const action = photo.conditionNotes ? "NOTE_EDITED" : "NOTE_ADDED";
-        await logNoteChange(itemId, user?.id || null, action, photo.id, noteText.trim());
+        const actionType = collectionIsLocked
+          ? "NOTE_EDITED_POST_SIGNATURE"
+          : action;
+        await logNoteChange(itemId, user?.id || null, actionType as any, photo.id, noteText.trim());
 
         await loadData();
       } catch (error) {
@@ -265,37 +281,73 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    Alert.alert(
-      "Delete Photo",
-      `Are you sure you want to delete this photo${photo.source === "collection_flow" ? " (from collection)" : ""}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteCollectionItemPhoto(photo.id);
+    // Strong warning for admins deleting collection_flow (locked) photos
+    if (isAdmin && photo.source === "collection_flow" && photo.isLocked) {
+      Alert.alert(
+        "⚠️ Delete Collection Photo?",
+        "This photo was taken during collection and was included when the customer signed the documentation.\n\nAre you sure you want to delete this photo?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete Anyway",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteCollectionItemPhoto(photo.id);
 
-              // Log to ItemHistory
-              const details = formatPhotoDetails(
-                photo.source,
-                !!(photo.latitude && photo.longitude),
-                !!photo.conditionNotes
-              );
-              await logPhotoChange(itemId, user?.id || null, "PHOTO_DELETED", details);
+                // Log to ItemHistory
+                const details = formatPhotoDetails(
+                  photo.source,
+                  !!(photo.latitude && photo.longitude),
+                  !!photo.conditionNotes
+                );
+                await logPhotoChange(itemId, user?.id || null, "PHOTO_DELETED", details);
 
-              await loadData();
-              setShowPhotoViewer(false);
-              Alert.alert("Success", "Photo deleted successfully");
-            } catch (error) {
-              console.error("Failed to delete photo:", error);
-              Alert.alert("Error", "Failed to delete photo");
-            }
+                await loadData();
+                setShowPhotoViewer(false);
+                Alert.alert("Success", "Photo deleted successfully");
+              } catch (error) {
+                console.error("Failed to delete photo:", error);
+                Alert.alert("Error", "Failed to delete photo");
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } else {
+      // Standard confirmation for added_later photos
+      Alert.alert(
+        "Delete Photo",
+        "Are you sure you want to delete this photo?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteCollectionItemPhoto(photo.id);
+
+                // Log to ItemHistory
+                const details = formatPhotoDetails(
+                  photo.source,
+                  !!(photo.latitude && photo.longitude),
+                  !!photo.conditionNotes
+                );
+                await logPhotoChange(itemId, user?.id || null, "PHOTO_DELETED", details);
+
+                await loadData();
+                setShowPhotoViewer(false);
+                Alert.alert("Success", "Photo deleted successfully");
+              } catch (error) {
+                console.error("Failed to delete photo:", error);
+                Alert.alert("Error", "Failed to delete photo");
+              }
+            },
+          },
+        ]
+      );
+    }
   };
 
   const addPhotoFromCamera = async () => {

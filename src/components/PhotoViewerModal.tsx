@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, Modal, Pressable, Image, ScrollView, Dimensions } from "react-native";
+import { View, Text, Modal, Pressable, Image, ScrollView, Dimensions, Linking, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ItemPhoto } from "../types/collection";
@@ -58,9 +58,20 @@ export default function PhotoViewerModal({
 
   const openInMaps = () => {
     if (currentPhoto.latitude && currentPhoto.longitude) {
-      const url = `https://maps.google.com/?q=${currentPhoto.latitude},${currentPhoto.longitude}`;
-      // In a real app, use Linking.openURL(url)
-      console.log("Open in maps:", url);
+      const lat = currentPhoto.latitude;
+      const lon = currentPhoto.longitude;
+      const label = "Photo Location";
+
+      const url = Platform.select({
+        ios: `maps:0,0?q=${label}@${lat},${lon}`,
+        android: `geo:0,0?q=${lat},${lon}(${label})`,
+        default: `https://maps.google.com/?q=${lat},${lon}`
+      });
+
+      Linking.openURL(url!).catch(err => {
+        // Fallback to Google Maps web if native app fails
+        Linking.openURL(`https://maps.google.com/?q=${lat},${lon}`);
+      });
     }
   };
 
@@ -199,10 +210,42 @@ export default function PhotoViewerModal({
             )}
 
             {/* Condition Notes */}
-            {currentPhoto.conditionNotes && (
-              <View className="bg-gray-800 rounded-lg p-3 mb-3">
-                <Text className="text-gray-400 text-xs mb-1">Condition Notes</Text>
-                <Text className="text-gray-200 text-sm">{currentPhoto.conditionNotes}</Text>
+            {(currentPhoto.conditionNotes || currentPhoto.originalNote) && (
+              <View className="mb-3">
+                {/* Original Note (if edited after signature) */}
+                {currentPhoto.originalNote && (
+                  <View className="bg-amber-900/30 rounded-lg p-3 mb-2 border border-amber-600/30">
+                    <View className="flex-row items-center mb-1">
+                      <Ionicons name="lock-closed" size={14} color="#FCD34D" />
+                      <Text className="text-amber-300 text-xs font-semibold ml-1">Original Note (Signed)</Text>
+                    </View>
+                    <Text className="text-gray-300 text-sm">{currentPhoto.originalNote}</Text>
+                  </View>
+                )}
+
+                {/* Current/Edited Note */}
+                {currentPhoto.conditionNotes && (
+                  <View className="bg-gray-800 rounded-lg p-3">
+                    <View className="flex-row items-center justify-between mb-1">
+                      <Text className="text-gray-400 text-xs">
+                        {currentPhoto.originalNote ? "Edited Note" : "Condition Notes"}
+                      </Text>
+                      {currentPhoto.noteEditedAt && (
+                        <Text className="text-gray-500 text-xs">
+                          Edited {new Date(currentPhoto.noteEditedAt).toLocaleDateString()}
+                        </Text>
+                      )}
+                    </View>
+                    <Text className="text-gray-200 text-sm">{currentPhoto.conditionNotes}</Text>
+                    {currentPhoto.noteEditedAt && currentPhoto.originalNote && (
+                      <View className="mt-2 pt-2 border-t border-gray-700">
+                        <Text className="text-amber-400 text-xs">
+                          📝 Note edited after collection was signed
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             )}
 

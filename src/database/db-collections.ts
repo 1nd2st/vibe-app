@@ -803,6 +803,9 @@ export async function updateCollectionItemPhoto(
     aiAnalyzed: boolean;
     annotationData: string;
     annotatedImageUri: string;
+    originalNote: string;
+    noteEditedAt: string;
+    noteEditedBy: number;
   }>
 ): Promise<void> {
   const database = getDB();
@@ -828,6 +831,18 @@ export async function updateCollectionItemPhoto(
   if (updates.annotatedImageUri !== undefined) {
     fields.push("annotated_image_uri = ?");
     values.push(updates.annotatedImageUri);
+  }
+  if (updates.originalNote !== undefined) {
+    fields.push("original_note = ?");
+    values.push(updates.originalNote);
+  }
+  if (updates.noteEditedAt !== undefined) {
+    fields.push("note_edited_at = ?");
+    values.push(updates.noteEditedAt);
+  }
+  if (updates.noteEditedBy !== undefined) {
+    fields.push("note_edited_by = ?");
+    values.push(updates.noteEditedBy);
   }
 
   if (fields.length === 0) return;
