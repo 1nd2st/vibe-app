@@ -12,6 +12,8 @@ import {
   Image,
   Dimensions,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -24,6 +26,8 @@ import {
   addItemNote,
   updateItemStatus,
   updateItemLocation,
+  addItemPhoto,
+  deleteItemPhoto,
   type InventoryItem,
   type ItemHistory,
   type ItemPhoto,
@@ -66,6 +70,11 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
   const [noteText, setNoteText] = useState("");
   const [labelSize, setLabelSize] = useState<LabelSize>("4x4");
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isAddingPhoto, setIsAddingPhoto] = useState(false);
+
+  // Permissions
+  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
 
   useEffect(() => {
     loadItem();
@@ -120,6 +129,133 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
       console.error("Failed to update status:", error);
       Alert.alert("Error", "Failed to update status");
     }
+  };
+
+  const handleAddPhoto = async () => {
+    Alert.alert(
+      "Add Photo",
+      "Choose a source",
+      [
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            if (!cameraPermission?.granted) {
+              const result = await requestCameraPermission();
+              if (!result.granted) {
+                Alert.alert("Permission Required", "Camera permission is required");
+                return;
+              }
+            }
+
+            try {
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 0.8,
+                allowsEditing: false,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                await processAndAddPhoto(result.assets[0].uri);
+              }
+            } catch (error) {
+              console.error("Failed to take photo:", error);
+              Alert.alert("Error", "Failed to take photo");
+            }
+          },
+        },
+        {
+          text: "Choose from Library",
+          onPress: async () => {
+            if (!mediaPermission?.granted) {
+              const result = await requestMediaPermission();
+              if (!result.granted) {
+                Alert.alert("Permission Required", "Media library permission is required");
+                return;
+              }
+            }
+
+            try {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 0.8,
+                allowsEditing: false,
+                allowsMultipleSelection: true,
+              });
+
+              if (!result.canceled) {
+                for (const asset of result.assets) {
+                  await processAndAddPhoto(asset.uri);
+                }
+              }
+            } catch (error) {
+              console.error("Failed to select photo:", error);
+              Alert.alert("Error", "Failed to select photo");
+            }
+          },
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  const processAndAddPhoto = async (sourceUri: string) => {
+    if (!user) return;
+
+    setIsAddingPhoto(true);
+    try {
+      // Copy to permanent storage
+      const photoId = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const permanentUri = `${FileSystem.documentDirectory}${photoId}.jpg`;
+
+      await FileSystem.copyAsync({
+        from: sourceUri,
+        to: permanentUri,
+      });
+
+      // Add to database
+      await addItemPhoto(itemId, permanentUri, user.id);
+
+      // Reload photos
+      await loadItem();
+      Alert.alert("Success", "Photo added successfully");
+    } catch (error) {
+      console.error("Failed to add photo:", error);
+      Alert.alert("Error", "Failed to add photo");
+    } finally {
+      setIsAddingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!user || photos.length === 0) return;
+
+    const currentPhoto = photos[selectedPhotoIndex];
+
+    Alert.alert(
+      "Delete Photo",
+      "Are you sure you want to delete this photo?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteItemPhoto(currentPhoto.uuid, user.id);
+              await loadItem();
+              setShowPhotosModal(false);
+              Alert.alert("Success", "Photo deleted successfully");
+            } catch (error) {
+              console.error("Failed to delete photo:", error);
+              Alert.alert("Error", "Failed to delete photo");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handlePrintLabel = async () => {
@@ -291,6 +427,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
 
         {/* Quick Actions */}
         <View className="mb-4">
+          {/* First Row - 3 buttons */}
           <View className="flex-row space-x-3 mb-3">
             <Pressable
               onPress={() => setShowLocationPicker(true)}
@@ -315,23 +452,21 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
             </Pressable>
           </View>
 
-          {/* View Pictures Button - Full Width */}
-          {photos.length > 0 && (
-            <Pressable
-              onPress={() => {
-                setSelectedPhotoIndex(0);
-                setShowPhotosModal(true);
-              }}
-              className="bg-green-100 rounded-xl p-4 items-center active:bg-green-200"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="images" size={24} color="#16A34A" />
-                <Text className="text-sm font-semibold text-green-900 ml-2">
-                  View Pictures ({photos.length})
-                </Text>
-              </View>
-            </Pressable>
-          )}
+          {/* Second Row - Pictures Button (Full Width, Always Visible) */}
+          <Pressable
+            onPress={() => {
+              setSelectedPhotoIndex(0);
+              setShowPhotosModal(true);
+            }}
+            className="bg-green-100 rounded-xl p-4 items-center active:bg-green-200"
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="images" size={24} color="#16A34A" />
+              <Text className="text-sm font-semibold text-green-900 ml-2">
+                Item Pictures ({photos.length})
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
         {/* History Section */}
@@ -570,88 +705,135 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
               <Ionicons name="close" size={28} color="#FFFFFF" />
             </Pressable>
             <Text className="text-lg font-semibold text-white">
-              {selectedPhotoIndex + 1} / {photos.length}
+              {photos.length > 0 ? `${selectedPhotoIndex + 1} / ${photos.length}` : "No Photos"}
             </Text>
-            <View style={{ width: 28 }} />
+            <Pressable onPress={handleAddPhoto} disabled={isAddingPhoto}>
+              {isAddingPhoto ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="add-circle" size={28} color="#10B981" />
+              )}
+            </Pressable>
           </View>
 
-          {/* Photo Viewer with Swipe */}
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(event) => {
-              const newIndex = Math.round(
-                event.nativeEvent.contentOffset.x / Dimensions.get("window").width
-              );
-              setSelectedPhotoIndex(newIndex);
-            }}
-            scrollEventThrottle={16}
-          >
-            {photos.map((photo, index) => (
-              <View
-                key={photo.id}
-                style={{ width: Dimensions.get("window").width }}
-                className="flex-1 items-center justify-center"
+          {/* Photo Viewer or Empty State */}
+          {photos.length > 0 ? (
+            <>
+              {/* Photo Viewer with Swipe */}
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(event) => {
+                  const newIndex = Math.round(
+                    event.nativeEvent.contentOffset.x / Dimensions.get("window").width
+                  );
+                  setSelectedPhotoIndex(newIndex);
+                }}
+                scrollEventThrottle={16}
               >
-                <Image
-                  source={{ uri: photo.annotated_uri || photo.uri }}
-                  style={{
-                    width: Dimensions.get("window").width,
-                    height: Dimensions.get("window").height * 0.7,
-                  }}
-                  resizeMode="contain"
-                />
-
-                {/* Photo Info */}
-                <View className="px-6 py-4 w-full">
-                  {photo.condition_notes && (
-                    <View className="bg-gray-900 rounded-xl p-4 mb-3">
-                      <Text className="text-xs text-gray-400 mb-1">NOTES</Text>
-                      <Text className="text-sm text-white">{photo.condition_notes}</Text>
-                    </View>
-                  )}
-
-                  {photo.ai_analyzed && photo.ai_detected_damage && (
-                    <View className="bg-red-900/30 border border-red-700 rounded-xl p-4">
-                      <View className="flex-row items-center mb-2">
-                        <Ionicons name="warning" size={16} color="#EF4444" />
-                        <Text className="text-xs font-semibold text-red-400 ml-2">
-                          AI DETECTED DAMAGE
-                        </Text>
-                      </View>
-                      <Text className="text-sm text-red-200">{photo.ai_detected_damage}</Text>
-                    </View>
-                  )}
-
-                  <Text className="text-xs text-gray-400 text-center mt-3">
-                    {format(new Date(photo.timestamp), "MMM d, yyyy h:mm a")}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-
-          {/* Thumbnail Navigation */}
-          {photos.length > 1 && (
-            <View className="px-6 py-4 border-t border-gray-800">
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {photos.map((photo, index) => (
-                  <Pressable
+                  <View
                     key={photo.id}
-                    onPress={() => setSelectedPhotoIndex(index)}
-                    className={`mr-2 rounded-lg overflow-hidden border-2 ${
-                      index === selectedPhotoIndex ? "border-blue-500" : "border-transparent"
-                    }`}
+                    style={{ width: Dimensions.get("window").width }}
+                    className="flex-1 items-center justify-center"
                   >
                     <Image
                       source={{ uri: photo.annotated_uri || photo.uri }}
-                      style={{ width: 60, height: 60 }}
-                      resizeMode="cover"
+                      style={{
+                        width: Dimensions.get("window").width,
+                        height: Dimensions.get("window").height * 0.6,
+                      }}
+                      resizeMode="contain"
                     />
-                  </Pressable>
+
+                    {/* Photo Info */}
+                    <View className="px-6 py-4 w-full">
+                      {photo.condition_notes && (
+                        <View className="bg-gray-900 rounded-xl p-4 mb-3">
+                          <Text className="text-xs text-gray-400 mb-1">NOTES</Text>
+                          <Text className="text-sm text-white">{photo.condition_notes}</Text>
+                        </View>
+                      )}
+
+                      {photo.ai_analyzed && photo.ai_detected_damage && (
+                        <View className="bg-red-900/30 border border-red-700 rounded-xl p-4 mb-3">
+                          <View className="flex-row items-center mb-2">
+                            <Ionicons name="warning" size={16} color="#EF4444" />
+                            <Text className="text-xs font-semibold text-red-400 ml-2">
+                              AI DETECTED DAMAGE
+                            </Text>
+                          </View>
+                          <Text className="text-sm text-red-200">{photo.ai_detected_damage}</Text>
+                        </View>
+                      )}
+
+                      <Text className="text-xs text-gray-400 text-center mt-2">
+                        {format(new Date(photo.timestamp), "MMM d, yyyy h:mm a")}
+                      </Text>
+
+                      {/* Delete Button */}
+                      <Pressable
+                        onPress={handleDeletePhoto}
+                        className="bg-red-600 rounded-xl py-3 mt-4 items-center active:bg-red-700"
+                      >
+                        <View className="flex-row items-center">
+                          <Ionicons name="trash" size={18} color="#FFFFFF" />
+                          <Text className="text-white font-semibold ml-2">Delete Photo</Text>
+                        </View>
+                      </Pressable>
+                    </View>
+                  </View>
                 ))}
               </ScrollView>
+
+              {/* Thumbnail Navigation */}
+              {photos.length > 1 && (
+                <View className="px-6 py-4 border-t border-gray-800">
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {photos.map((photo, index) => (
+                      <Pressable
+                        key={photo.id}
+                        onPress={() => setSelectedPhotoIndex(index)}
+                        className={`mr-2 rounded-lg overflow-hidden border-2 ${
+                          index === selectedPhotoIndex ? "border-blue-500" : "border-transparent"
+                        }`}
+                      >
+                        <Image
+                          source={{ uri: photo.annotated_uri || photo.uri }}
+                          style={{ width: 60, height: 60 }}
+                          resizeMode="cover"
+                        />
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          ) : (
+            // Empty State
+            <View className="flex-1 items-center justify-center px-6">
+              <Ionicons name="images-outline" size={80} color="#4B5563" />
+              <Text className="text-gray-400 text-xl font-semibold mt-4 text-center">
+                No Photos Yet
+              </Text>
+              <Text className="text-gray-500 text-center mt-2 mb-6">
+                {"Add photos to document this item's condition"}
+              </Text>
+              <Pressable
+                onPress={handleAddPhoto}
+                disabled={isAddingPhoto}
+                className="bg-green-600 rounded-xl px-8 py-4 active:bg-green-700"
+              >
+                {isAddingPhoto ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <View className="flex-row items-center">
+                    <Ionicons name="camera" size={20} color="#FFFFFF" />
+                    <Text className="text-white text-lg font-semibold ml-2">Add First Photo</Text>
+                  </View>
+                )}
+              </Pressable>
             </View>
           )}
         </SafeAreaView>

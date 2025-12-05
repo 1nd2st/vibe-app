@@ -121,6 +121,27 @@ export default function SettingsScreen({ navigation }: Props) {
         className="flex-1"
       >
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+        {/* User Management Link (Admin Only) */}
+        <Pressable
+          onPress={() => (navigation as any).navigate("InventorySettings")}
+          className="bg-white rounded-2xl p-4 mb-4 border-2 border-blue-200 active:bg-gray-50"
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-blue-100 rounded-full p-2 mr-3">
+                  <Ionicons name="people" size={20} color="#2563EB" />
+                </View>
+                <Text className="text-lg font-semibold text-gray-900">User Management & Security</Text>
+              </View>
+              <Text className="text-sm text-gray-600 ml-11">
+                Manage users, passwords, and access control
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#3B82F6" />
+          </View>
+        </Pressable>
+
         {/* General Settings */}
         <View className="bg-white rounded-2xl p-4 mb-4">
           <Text className="text-lg font-semibold text-gray-900 mb-4">General</Text>

@@ -1323,6 +1323,61 @@ export async function getItemPhotos(itemId: number): Promise<ItemPhoto[]> {
   }));
 }
 
+export async function addItemPhoto(
+  itemId: number,
+  uri: string,
+  userId: number | null
+): Promise<string> {
+  const database = getDB();
+  const uuid = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const timestamp = new Date().toISOString();
+
+  await database.runAsync(
+    `INSERT INTO ItemPhoto (uuid, item_id, uri, timestamp)
+     VALUES (?, ?, ?, ?)`,
+    [uuid, itemId, uri, timestamp]
+  );
+
+  // Log to history
+  await database.runAsync(
+    `INSERT INTO ItemHistory (item_id, user_id, action_type, notes)
+     VALUES (?, ?, 'PHOTO_ADDED', 'Photo added')`,
+    [itemId, userId]
+  );
+
+  return uuid;
+}
+
+export async function deleteItemPhoto(
+  photoUuid: string,
+  userId: number | null
+): Promise<void> {
+  const database = getDB();
+
+  // Get photo to find item_id
+  const photo = await database.getFirstAsync<{item_id: number}>(
+    "SELECT item_id FROM ItemPhoto WHERE uuid = ?",
+    [photoUuid]
+  );
+
+  if (!photo) {
+    throw new Error("Photo not found");
+  }
+
+  // Delete photo
+  await database.runAsync(
+    "DELETE FROM ItemPhoto WHERE uuid = ?",
+    [photoUuid]
+  );
+
+  // Log to history
+  await database.runAsync(
+    `INSERT INTO ItemHistory (item_id, user_id, action_type, notes)
+     VALUES (?, ?, 'PHOTO_DELETED', 'Photo deleted')`,
+    [photo.item_id, userId]
+  );
+}
+
 // Re-export types from old db.ts for compatibility
 export type { User as UserOld } from "./db";
 export { getUserById } from "./db";
