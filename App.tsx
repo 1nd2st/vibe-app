@@ -3,6 +3,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "./src/state/authStore";
 
@@ -80,87 +81,89 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName={isAuthenticated ? "Home" : "Login"}
-            screenOptions={{
-              headerShown: false,
-              animation: "default",
-            }}
-          >
-            {!isAuthenticated ? (
-              // Auth screens
-              <Stack.Screen name="Login">
-                {(props) => (
-                  <LoginScreen
-                    {...props}
-                    onLoginSuccess={() => {
-                      // Navigation will handle automatically via state
-                    }}
-                  />
-                )}
-              </Stack.Screen>
-            ) : (
-              <>
-                {/* Home and Inventory Management screens */}
-                <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen name="InventoryMenu" component={InventoryMenuScreen} />
-                <Stack.Screen name="ScanPutAway" component={ScanPutAwayScreen} />
-                <Stack.Screen name="SearchItem" component={SearchItemScreen} />
-                <Stack.Screen name="InventoryItemDetail" component={InventoryItemDetailScreen} />
-                <Stack.Screen name="BrowseLocations" component={BrowseLocationsScreen} />
-                <Stack.Screen name="InventorySettings" component={InventorySettingsScreen} />
-                <Stack.Screen name="UserManagement" component={UserManagementScreen} />
-                <Stack.Screen name="PasswordPolicy" component={PasswordPolicyScreen} />
-                <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <ActionSheetProvider>
+          <NavigationContainer>
+            <Stack.Navigator
+              initialRouteName={isAuthenticated ? "Home" : "Login"}
+              screenOptions={{
+                headerShown: false,
+                animation: "default",
+              }}
+            >
+              {!isAuthenticated ? (
+                // Auth screens
+                <Stack.Screen name="Login">
+                  {(props) => (
+                    <LoginScreen
+                      {...props}
+                      onLoginSuccess={() => {
+                        // Navigation will handle automatically via state
+                      }}
+                    />
+                  )}
+                </Stack.Screen>
+              ) : (
+                <>
+                  {/* Home and Inventory Management screens */}
+                  <Stack.Screen name="Home" component={HomeScreen} />
+                  <Stack.Screen name="InventoryMenu" component={InventoryMenuScreen} />
+                  <Stack.Screen name="ScanPutAway" component={ScanPutAwayScreen} />
+                  <Stack.Screen name="SearchItem" component={SearchItemScreen} />
+                  <Stack.Screen name="InventoryItemDetail" component={InventoryItemDetailScreen} />
+                  <Stack.Screen name="BrowseLocations" component={BrowseLocationsScreen} />
+                  <Stack.Screen name="InventorySettings" component={InventorySettingsScreen} />
+                  <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+                  <Stack.Screen name="PasswordPolicy" component={PasswordPolicyScreen} />
+                  <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
 
-                {/* Collection screens (existing) */}
-                <Stack.Screen name="Customers" component={CustomersScreen} />
-                <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
-                <Stack.Screen name="Collections" component={CollectionsScreen} />
-                <Stack.Screen
-                  name="NewCollection"
-                  component={NewCollectionScreen}
-                  options={{ presentation: "card" }}
-                />
-                <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
-                <Stack.Screen
-                  name="AddItem"
-                  component={AddItemScreen}
-                  options={{ presentation: "modal" }}
-                />
-                <Stack.Screen
-                  name="Camera"
-                  component={CameraScreen}
-                  options={{ presentation: "fullScreenModal" }}
-                />
-                <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
-                <Stack.Screen
-                  name="PhotoAnnotation"
-                  component={PhotoAnnotationScreen}
-                  options={{ presentation: "fullScreenModal" }}
-                />
-                <Stack.Screen
-                  name="QRCodeDisplay"
-                  component={QRCodeDisplayScreen}
-                  options={{ presentation: "modal" }}
-                />
-                <Stack.Screen
-                  name="SignCollection"
-                  component={SignCollectionScreen}
-                  options={{ presentation: "modal" }}
-                />
-                <Stack.Screen name="Settings" component={SettingsScreen} />
-                <Stack.Screen
-                  name="QRScanner"
-                  component={QRScannerScreen}
-                  options={{ presentation: "fullScreenModal" }}
-                />
-              </>
-            )}
-          </Stack.Navigator>
-          <StatusBar style="auto" />
-        </NavigationContainer>
+                  {/* Collection screens (existing) */}
+                  <Stack.Screen name="Customers" component={CustomersScreen} />
+                  <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
+                  <Stack.Screen name="Collections" component={CollectionsScreen} />
+                  <Stack.Screen
+                    name="NewCollection"
+                    component={NewCollectionScreen}
+                    options={{ presentation: "card" }}
+                  />
+                  <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+                  <Stack.Screen
+                    name="AddItem"
+                    component={AddItemScreen}
+                    options={{ presentation: "modal" }}
+                  />
+                  <Stack.Screen
+                    name="Camera"
+                    component={CameraScreen}
+                    options={{ presentation: "fullScreenModal" }}
+                  />
+                  <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
+                  <Stack.Screen
+                    name="PhotoAnnotation"
+                    component={PhotoAnnotationScreen}
+                    options={{ presentation: "fullScreenModal" }}
+                  />
+                  <Stack.Screen
+                    name="QRCodeDisplay"
+                    component={QRCodeDisplayScreen}
+                    options={{ presentation: "modal" }}
+                  />
+                  <Stack.Screen
+                    name="SignCollection"
+                    component={SignCollectionScreen}
+                    options={{ presentation: "modal" }}
+                  />
+                  <Stack.Screen name="Settings" component={SettingsScreen} />
+                  <Stack.Screen
+                    name="QRScanner"
+                    component={QRScannerScreen}
+                    options={{ presentation: "fullScreenModal" }}
+                  />
+                </>
+              )}
+            </Stack.Navigator>
+            <StatusBar style="auto" />
+          </NavigationContainer>
+        </ActionSheetProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

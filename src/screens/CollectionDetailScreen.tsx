@@ -12,7 +12,7 @@ import { generateAndSharePDF } from "../utils/pdfReport";
 import { printMultipleItemLabels } from "../utils/zebraPrinter";
 import Breadcrumb from "../components/Breadcrumb";
 import SwipeableItem from "../components/SwipeableItem";
-import * as ContextMenu from "zeego/context-menu";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { getCollectionByUuid, updateCollection, deleteCollectionItem, getCustomerById } from "../database/db-collections";
 import type { Collection, CollectionItem, Customer } from "../types/collection";
 import { buildCollectionSummary, formatNumber, formatCurrency } from "../utils/collectionSummary";
@@ -25,6 +25,7 @@ type Props = {
 export default function CollectionDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { collectionId } = route.params;
+  const { showActionSheetWithOptions } = useActionSheet();
 
   // SQLite state
   const [collection, setCollection] = useState<Collection | null>(null);
@@ -260,6 +261,31 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
           },
         },
       ]
+    );
+  };
+
+  const handleItemLongPress = (item: CollectionItem) => {
+    const options = collection?.status === "signed"
+      ? ["View Details", "Cancel"]
+      : ["View Details", "Delete Item", "Cancel"];
+    const destructiveButtonIndex = collection?.status === "signed" ? undefined : 1;
+    const cancelButtonIndex = collection?.status === "signed" ? 1 : 2;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex,
+        title: item.title,
+        message: "Choose an action",
+      },
+      (selectedIndex?: number) => {
+        if (selectedIndex === 0) {
+          navigation.navigate("ItemDetail", { itemId: item.id, collectionId });
+        } else if (selectedIndex === 1 && collection?.status !== "signed") {
+          handleDeleteItem(item.id, item.title);
+        }
+      }
     );
   };
 
@@ -519,110 +545,84 @@ export default function CollectionDetailScreen({ navigation, route }: Props) {
             enabled={collection.status !== "signed" && !selectionMode}
             onDelete={() => handleDeleteItem(item.id, item.title)}
           >
-            <ContextMenu.Root>
-              <ContextMenu.Trigger>
-                <Pressable
-                  onPress={() => {
-                    if (selectionMode) {
-                      handleToggleItemSelection(item.id);
-                    } else {
-                      navigation.navigate("ItemDetail", { itemId: item.id, collectionId });
-                    }
-                  }}
-                  className={`bg-white rounded-2xl p-4 mb-3 border active:bg-gray-50 ${
-                    selectionMode && selectedItems.has(item.id)
-                      ? "border-blue-600 bg-blue-50"
-                      : "border-gray-100"
-                  }`}
-                >
-                  <View className="flex-row">
-                    {selectionMode && (
-                      <View className="mr-3 items-center justify-center">
-                        <View
-                          className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
-                            selectedItems.has(item.id)
-                              ? "bg-blue-600 border-blue-600"
-                              : "border-gray-300 bg-white"
-                          }`}
-                        >
-                          {selectedItems.has(item.id) && (
-                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                          )}
-                        </View>
-                      </View>
-                    )}
-                    {item.photos.length > 0 && (
-                      <View className="w-20 h-20 bg-gray-100 rounded-xl mr-3 items-center justify-center">
-                        <Ionicons name="image" size={32} color="#9CA3AF" />
-                      </View>
-                    )}
-                    <View className="flex-1">
-                      <Text className="text-base font-semibold text-gray-900">{item.title}</Text>
-                      {item.artistName && (
-                        <Text className="text-sm text-gray-600 mt-0.5">by {item.artistName}</Text>
+            <Pressable
+              onPress={() => {
+                if (selectionMode) {
+                  handleToggleItemSelection(item.id);
+                } else {
+                  navigation.navigate("ItemDetail", { itemId: item.id, collectionId });
+                }
+              }}
+              onLongPress={() => !selectionMode && handleItemLongPress(item)}
+              className={`bg-white rounded-2xl p-4 mb-3 border active:bg-gray-50 ${
+                selectionMode && selectedItems.has(item.id)
+                  ? "border-blue-600 bg-blue-50"
+                  : "border-gray-100"
+              }`}
+            >
+              <View className="flex-row">
+                {selectionMode && (
+                  <View className="mr-3 items-center justify-center">
+                    <View
+                      className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+                        selectedItems.has(item.id)
+                          ? "bg-blue-600 border-blue-600"
+                          : "border-gray-300 bg-white"
+                      }`}
+                    >
+                      {selectedItems.has(item.id) && (
+                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                       )}
-                      <Text className="text-xs text-gray-500 mt-1">
-                        {item.dimensions.length} × {item.dimensions.width} × {item.dimensions.height} {item.dimensions.unit}
-                      </Text>
-                      <View className="flex-row items-center mt-2">
-                        <View
-                          className={`px-2 py-1 rounded-md ${
-                            item.overallCondition === "Excellent"
-                              ? "bg-green-100"
-                              : item.overallCondition === "Good"
-                              ? "bg-blue-100"
-                              : item.overallCondition === "Fair"
-                              ? "bg-yellow-100"
-                              : "bg-red-100"
-                          }`}
-                        >
-                          <Text
-                            className={`text-xs font-medium ${
-                              item.overallCondition === "Excellent"
-                                ? "text-green-700"
-                                : item.overallCondition === "Good"
-                                ? "text-blue-700"
-                                : item.overallCondition === "Fair"
-                                ? "text-yellow-700"
-                                : "text-red-700"
-                            }`}
-                          >
-                            {item.overallCondition}
-                          </Text>
-                        </View>
-                        <Text className="text-xs text-gray-400 ml-2">
-                          {item.photos.length} photo{item.photos.length !== 1 ? "s" : ""}
-                        </Text>
-                      </View>
                     </View>
-                    {!selectionMode && <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />}
                   </View>
-                </Pressable>
-              </ContextMenu.Trigger>
-              <ContextMenu.Content>
-                <ContextMenu.Item
-                  key="view"
-                  onSelect={() => navigation.navigate("ItemDetail", { itemId: item.id, collectionId })}
-                >
-                  <ContextMenu.ItemTitle>View Details</ContextMenu.ItemTitle>
-                  <ContextMenu.ItemIcon
-                    ios={{ name: "eye", pointSize: 18 }}
-                  />
-                </ContextMenu.Item>
-                {collection.status !== "signed" && (
-                  <ContextMenu.Item
-                    key="delete"
-                    destructive
-                    onSelect={() => handleDeleteItem(item.id, item.title)}
-                  >
-                    <ContextMenu.ItemTitle>Delete Item</ContextMenu.ItemTitle>
-                    <ContextMenu.ItemIcon
-                      ios={{ name: "trash", pointSize: 18 }}
-                    />
-                  </ContextMenu.Item>
                 )}
-              </ContextMenu.Content>
-            </ContextMenu.Root>
+                {item.photos.length > 0 && (
+                  <View className="w-20 h-20 bg-gray-100 rounded-xl mr-3 items-center justify-center">
+                    <Ionicons name="image" size={32} color="#9CA3AF" />
+                  </View>
+                )}
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-gray-900">{item.title}</Text>
+                  {item.artistName && (
+                    <Text className="text-sm text-gray-600 mt-0.5">by {item.artistName}</Text>
+                  )}
+                  <Text className="text-xs text-gray-500 mt-1">
+                    {item.dimensions.length} × {item.dimensions.width} × {item.dimensions.height} {item.dimensions.unit}
+                  </Text>
+                  <View className="flex-row items-center mt-2">
+                    <View
+                      className={`px-2 py-1 rounded-md ${
+                        item.overallCondition === "Excellent"
+                          ? "bg-green-100"
+                          : item.overallCondition === "Good"
+                          ? "bg-blue-100"
+                          : item.overallCondition === "Fair"
+                          ? "bg-yellow-100"
+                          : "bg-red-100"
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs font-medium ${
+                          item.overallCondition === "Excellent"
+                            ? "text-green-700"
+                            : item.overallCondition === "Good"
+                            ? "text-blue-700"
+                            : item.overallCondition === "Fair"
+                            ? "text-yellow-700"
+                            : "text-red-700"
+                        }`}
+                      >
+                        {item.overallCondition}
+                      </Text>
+                    </View>
+                    <Text className="text-xs text-gray-400 ml-2">
+                      {item.photos.length} photo{item.photos.length !== 1 ? "s" : ""}
+                    </Text>
+                  </View>
+                </View>
+                {!selectionMode && <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />}
+              </View>
+            </Pressable>
           </SwipeableItem>
         )}
         ListFooterComponent={

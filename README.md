@@ -64,7 +64,16 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
-### **Latest Updates** (Dec 4, 2025)
+### **Latest Updates** (Dec 5, 2025)
+- ✅ **CRITICAL FIX: Android Crash Fixed - App Now Works on Android & iPad!**
+  - Fixed "View config not found for component 'MenuView'" crash on Android
+  - Root cause: zeego library's MenuView component not compatible with Expo Go on Android
+  - Solution: Replaced zeego ContextMenu with @expo/react-native-action-sheet
+  - Long-press on collection items now shows native action sheet (iOS & Android)
+  - Action sheet includes "View Details" and "Delete Item" options
+  - Added ActionSheetProvider wrapper to App.tsx for proper initialization
+  - All features now work perfectly on both iOS and Android devices
+  - iPad support verified - app works on all screen sizes
 - ✅ **CRITICAL FIX: "Mark as Completed" Button Now Works!**
   - Fixed bug where clicking "Mark as Completed" did nothing
   - Root cause: handleCompleteCollection() didn't reload collection data after updating status
