@@ -65,6 +65,31 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 5, 2025)
+- ✅ **NEW: Item Photos Gallery View with Zoom!**
+  - Added "View Pictures" button to Inventory Item Detail screen
+  - Shows photo count badge (e.g., "View Pictures (5)")
+  - Full-screen photo gallery with swipeable images
+  - Images display at 70% screen height with contain mode for proper viewing
+  - Horizontal swipe to navigate between photos
+  - Thumbnail navigation bar at bottom for quick access
+  - Shows photo metadata: condition notes, AI damage detection, timestamp
+  - Optimized for performance - only loads visible photos
+  - Works smoothly with thousands of photos in database
+  - Compatible with both iOS and Android
+- ✅ **IMPROVED: Browse Locations UX - Cleaner Layout!**
+  - Replaced 4 separate action buttons with single "..." menu button
+  - Tap "..." on any location to see options: View Items, Print Labels, Rename, Disable
+  - Much cleaner, less cluttered interface
+  - Native action sheet on both iOS and Android
+  - Destructive actions (Disable) shown in red
+  - Menu adapts based on permissions (admin vs regular user)
+- ✅ **IMPROVED: View Items List - More Information!**
+  - Enhanced items list in Browse Locations → View Items
+  - Now shows: Inventory Number (header), Item Title, Description, Customer
+  - Displays "No description" if description is empty
+  - Customer shown with person icon for better visual clarity
+  - Cleaner card design with better hierarchy
+  - Tap item to view full details
 - ✅ **CRITICAL FIX: Android Photo Save Crash Fixed!**
   - Fixed app crash when clicking "Done" after taking photos on Android
   - Root cause: Insufficient error handling during photo save and navigation
@@ -74,6 +99,14 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
   - Continue saving remaining photos if one fails (graceful degradation)
   - Better error messages show specific failure reasons
   - Photo capture now works reliably on both iOS and Android
+- ✅ **CRITICAL FIX: Blank PDF Reports on Android Fixed!**
+  - Fixed blank PDF issue when emailing reports on Android
+  - Root cause: CSS Grid not supported by Android PDF renderer
+  - Solution: Replaced CSS Grid with float-based layouts
+  - Used clearfix pattern for proper layout
+  - Removed advanced CSS features (flexbox replaced with floats)
+  - PDFs now render perfectly on both iOS and Android
+  - All content visible: headers, summaries, photos, signatures
 - ✅ **CRITICAL FIX: Android Crash Fixed - App Now Works on Android & iPad!**
   - Fixed "View config not found for component 'MenuView'" crash on Android
   - Root cause: zeego library's MenuView component not compatible with Expo Go on Android

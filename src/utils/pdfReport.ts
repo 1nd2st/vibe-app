@@ -52,7 +52,7 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
       })
     );
 
-    // Generate HTML for PDF
+    // Generate HTML for PDF (Android-compatible)
     const html = `
 <!DOCTYPE html>
 <html>
@@ -63,10 +63,9 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
     * {
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      font-family: Arial, sans-serif;
       padding: 20px;
       color: #1f2937;
       font-size: 11px;
@@ -100,15 +99,25 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
       border-bottom: 1px solid #e5e7eb;
     }
     .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      width: 100%;
       margin-bottom: 15px;
     }
+    .summary-grid::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
     .summary-item {
+      float: left;
+      width: 48%;
+      margin-right: 2%;
+      margin-bottom: 10px;
       padding: 10px;
       background: #f9fafb;
       border-radius: 6px;
+    }
+    .summary-item:nth-child(2n) {
+      margin-right: 0;
     }
     .summary-label {
       font-size: 10px;
@@ -134,11 +143,22 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
       font-size: 12px;
     }
     .data-quality-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
       font-size: 10px;
       color: #92400e;
+    }
+    .data-quality-grid::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+    .data-quality-grid > div {
+      float: left;
+      width: 48%;
+      margin-right: 2%;
+      margin-bottom: 8px;
+    }
+    .data-quality-grid > div:nth-child(2n) {
+      margin-right: 0;
     }
     .item-card {
       background: white;
@@ -149,10 +169,21 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
       page-break-inside: avoid;
     }
     .item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
       margin-bottom: 10px;
+    }
+    .item-header::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+    .item-header-left {
+      float: left;
+      width: 70%;
+    }
+    .item-header-right {
+      float: right;
+      width: 28%;
+      text-align: right;
     }
     .item-title {
       font-size: 14px;
@@ -176,15 +207,24 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
     .condition-poor { background: #fee2e2; color: #991b1b; }
     .condition-damaged { background: #fecaca; color: #7f1d1d; }
     .item-details {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
       margin-top: 10px;
       padding-top: 10px;
       border-top: 1px solid #f3f4f6;
     }
+    .item-details::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
     .detail-item {
+      float: left;
+      width: 48%;
+      margin-right: 2%;
+      margin-bottom: 8px;
       font-size: 10px;
+    }
+    .detail-item:nth-child(2n) {
+      margin-right: 0;
     }
     .detail-label {
       color: #6b7280;
@@ -195,17 +235,24 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
       font-weight: 500;
     }
     .photo-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
       margin: 10px 0;
     }
+    .photo-grid::after {
+      content: "";
+      display: table;
+      clear: both;
+    }
     .photo-grid img {
-      width: 100%;
+      float: left;
+      width: 31%;
+      margin-right: 2%;
+      margin-bottom: 8px;
       height: 100px;
-      object-fit: cover;
       border-radius: 6px;
       border: 1px solid #e5e7eb;
+    }
+    .photo-grid img:nth-child(3n) {
+      margin-right: 0;
     }
     .signature-section {
       margin-top: 30px;
@@ -316,12 +363,14 @@ export async function generateAndSharePDF(collection: Collection): Promise<void>
         (item, index) => `
       <div class="item-card">
         <div class="item-header">
-          <div>
+          <div class="item-header-left">
             <div class="item-title">${index + 1}. ${item.title}</div>
             ${item.artistName ? `<div style="font-size: 10px; color: #6b7280; margin-top: 2px;">by ${item.artistName}</div>` : ""}
             <div class="item-id">${item.displayId}</div>
           </div>
-          <span class="condition-badge condition-${item.overallCondition.toLowerCase()}">${item.overallCondition}</span>
+          <div class="item-header-right">
+            <span class="condition-badge condition-${item.overallCondition.toLowerCase()}">${item.overallCondition}</span>
+          </div>
         </div>
 
         ${

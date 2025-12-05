@@ -1285,6 +1285,44 @@ export async function getItemHistory(itemId: number): Promise<ItemHistory[]> {
   return result;
 }
 
+// ========== PHOTO OPERATIONS ==========
+
+export interface ItemPhoto {
+  id: number;
+  uuid: string;
+  item_id: number;
+  uri: string;
+  condition_notes: string | null;
+  ai_detected_damage: string | null;
+  ai_analyzed: boolean;
+  annotation_data: string | null;
+  annotated_uri: string | null;
+  timestamp: string;
+  created_at: string;
+}
+
+export async function getItemPhotos(itemId: number): Promise<ItemPhoto[]> {
+  const database = getDB();
+  const result = await database.getAllAsync<any>(
+    "SELECT * FROM ItemPhoto WHERE item_id = ? ORDER BY timestamp DESC",
+    [itemId]
+  );
+
+  return result.map((row) => ({
+    id: row.id,
+    uuid: row.uuid,
+    item_id: row.item_id,
+    uri: row.uri,
+    condition_notes: row.condition_notes,
+    ai_detected_damage: row.ai_detected_damage,
+    ai_analyzed: Boolean(row.ai_analyzed),
+    annotation_data: row.annotation_data,
+    annotated_uri: row.annotated_uri,
+    timestamp: row.timestamp,
+    created_at: row.created_at,
+  }));
+}
+
 // Re-export types from old db.ts for compatibility
 export type { User as UserOld } from "./db";
 export { getUserById } from "./db";

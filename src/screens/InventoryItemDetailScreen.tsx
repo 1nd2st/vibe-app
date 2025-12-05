@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Image,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -18,11 +20,13 @@ import { HomeStackParamList } from "../navigation/HomeNavigator";
 import {
   getItemById,
   getItemHistory,
+  getItemPhotos,
   addItemNote,
   updateItemStatus,
   updateItemLocation,
   type InventoryItem,
   type ItemHistory,
+  type ItemPhoto,
   type ItemStatus,
 } from "../database/db-enhanced";
 import { useAuthStore } from "../state/authStore";
@@ -51,11 +55,14 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
   const { user } = useAuthStore();
   const [item, setItem] = useState<InventoryItem | null>(null);
   const [history, setHistory] = useState<ItemHistory[]>([]);
+  const [photos, setPhotos] = useState<ItemPhoto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showPhotosModal, setShowPhotosModal] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [noteText, setNoteText] = useState("");
   const [labelSize, setLabelSize] = useState<LabelSize>("4x4");
   const [isPrinting, setIsPrinting] = useState(false);
@@ -67,9 +74,10 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
   const loadItem = async () => {
     setIsLoading(true);
     try {
-      const [itemData, historyData] = await Promise.all([
+      const [itemData, historyData, photosData] = await Promise.all([
         getItemById(itemId),
         getItemHistory(itemId),
+        getItemPhotos(itemId),
       ]);
 
       if (itemData) {
@@ -77,6 +85,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
         setNoteText(itemData.notes || "");
       }
       setHistory(historyData);
+      setPhotos(photosData);
     } catch (error) {
       console.error("Failed to load item:", error);
       Alert.alert("Error", "Failed to load item");
@@ -281,28 +290,48 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
         </View>
 
         {/* Quick Actions */}
-        <View className="flex-row space-x-3 mb-4">
-          <Pressable
-            onPress={() => setShowLocationPicker(true)}
-            className="flex-1 bg-blue-100 rounded-xl p-4 items-center active:bg-blue-200"
-          >
-            <Ionicons name="location" size={24} color="#2563EB" />
-            <Text className="text-sm font-semibold text-blue-900 mt-1">Move Item</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setShowNoteModal(true)}
-            className="flex-1 bg-purple-100 rounded-xl p-4 items-center active:bg-purple-200"
-          >
-            <Ionicons name="create" size={24} color="#9333EA" />
-            <Text className="text-sm font-semibold text-purple-900 mt-1">Add Note</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setShowPrintModal(true)}
-            className="flex-1 bg-orange-100 rounded-xl p-4 items-center active:bg-orange-200"
-          >
-            <Ionicons name="print" size={24} color="#EA580C" />
-            <Text className="text-sm font-semibold text-orange-900 mt-1">Print Label</Text>
-          </Pressable>
+        <View className="mb-4">
+          <View className="flex-row space-x-3 mb-3">
+            <Pressable
+              onPress={() => setShowLocationPicker(true)}
+              className="flex-1 bg-blue-100 rounded-xl p-4 items-center active:bg-blue-200"
+            >
+              <Ionicons name="location" size={24} color="#2563EB" />
+              <Text className="text-sm font-semibold text-blue-900 mt-1">Move Item</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowNoteModal(true)}
+              className="flex-1 bg-purple-100 rounded-xl p-4 items-center active:bg-purple-200"
+            >
+              <Ionicons name="create" size={24} color="#9333EA" />
+              <Text className="text-sm font-semibold text-purple-900 mt-1">Add Note</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowPrintModal(true)}
+              className="flex-1 bg-orange-100 rounded-xl p-4 items-center active:bg-orange-200"
+            >
+              <Ionicons name="print" size={24} color="#EA580C" />
+              <Text className="text-sm font-semibold text-orange-900 mt-1">Print Label</Text>
+            </Pressable>
+          </View>
+
+          {/* View Pictures Button - Full Width */}
+          {photos.length > 0 && (
+            <Pressable
+              onPress={() => {
+                setSelectedPhotoIndex(0);
+                setShowPhotosModal(true);
+              }}
+              className="bg-green-100 rounded-xl p-4 items-center active:bg-green-200"
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="images" size={24} color="#16A34A" />
+                <Text className="text-sm font-semibold text-green-900 ml-2">
+                  View Pictures ({photos.length})
+                </Text>
+              </View>
+            </Pressable>
+          )}
         </View>
 
         {/* History Section */}
@@ -527,6 +556,104 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
               )}
             </Pressable>
           </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Photos Modal */}
+      <Modal visible={showPhotosModal} animationType="fade" transparent={false}>
+        <SafeAreaView className="flex-1 bg-black">
+          <StatusBar style="light" />
+
+          {/* Header */}
+          <View className="px-6 py-4 flex-row items-center justify-between">
+            <Pressable onPress={() => setShowPhotosModal(false)}>
+              <Ionicons name="close" size={28} color="#FFFFFF" />
+            </Pressable>
+            <Text className="text-lg font-semibold text-white">
+              {selectedPhotoIndex + 1} / {photos.length}
+            </Text>
+            <View style={{ width: 28 }} />
+          </View>
+
+          {/* Photo Viewer with Swipe */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(event) => {
+              const newIndex = Math.round(
+                event.nativeEvent.contentOffset.x / Dimensions.get("window").width
+              );
+              setSelectedPhotoIndex(newIndex);
+            }}
+            scrollEventThrottle={16}
+          >
+            {photos.map((photo, index) => (
+              <View
+                key={photo.id}
+                style={{ width: Dimensions.get("window").width }}
+                className="flex-1 items-center justify-center"
+              >
+                <Image
+                  source={{ uri: photo.annotated_uri || photo.uri }}
+                  style={{
+                    width: Dimensions.get("window").width,
+                    height: Dimensions.get("window").height * 0.7,
+                  }}
+                  resizeMode="contain"
+                />
+
+                {/* Photo Info */}
+                <View className="px-6 py-4 w-full">
+                  {photo.condition_notes && (
+                    <View className="bg-gray-900 rounded-xl p-4 mb-3">
+                      <Text className="text-xs text-gray-400 mb-1">NOTES</Text>
+                      <Text className="text-sm text-white">{photo.condition_notes}</Text>
+                    </View>
+                  )}
+
+                  {photo.ai_analyzed && photo.ai_detected_damage && (
+                    <View className="bg-red-900/30 border border-red-700 rounded-xl p-4">
+                      <View className="flex-row items-center mb-2">
+                        <Ionicons name="warning" size={16} color="#EF4444" />
+                        <Text className="text-xs font-semibold text-red-400 ml-2">
+                          AI DETECTED DAMAGE
+                        </Text>
+                      </View>
+                      <Text className="text-sm text-red-200">{photo.ai_detected_damage}</Text>
+                    </View>
+                  )}
+
+                  <Text className="text-xs text-gray-400 text-center mt-3">
+                    {format(new Date(photo.timestamp), "MMM d, yyyy h:mm a")}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Thumbnail Navigation */}
+          {photos.length > 1 && (
+            <View className="px-6 py-4 border-t border-gray-800">
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {photos.map((photo, index) => (
+                  <Pressable
+                    key={photo.id}
+                    onPress={() => setSelectedPhotoIndex(index)}
+                    className={`mr-2 rounded-lg overflow-hidden border-2 ${
+                      index === selectedPhotoIndex ? "border-blue-500" : "border-transparent"
+                    }`}
+                  >
+                    <Image
+                      source={{ uri: photo.annotated_uri || photo.uri }}
+                      style={{ width: 60, height: 60 }}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

@@ -1,4 +1,3 @@
-// Browse Locations screen with drill-down navigation
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -14,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { HomeStackParamList } from "../navigation/HomeNavigator";
 import {
   getLocations,
@@ -40,6 +40,7 @@ type Props = NativeStackScreenProps<HomeStackParamList, "BrowseLocations">;
 
 export default function BrowseLocationsScreen({ navigation }: Props) {
   const { user } = useAuthStore();
+  const { showActionSheetWithOptions } = useActionSheet();
   const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<Location[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -118,15 +119,79 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
   };
 
   const handleViewItems = async (location: Location) => {
+    console.log(`[BROWSE] handleViewItems called for location: ${location.id} ${location.name}`);
     setSelectedLocation(location);
     try {
+      console.log("[BROWSE] Fetching items for location:", location.id);
       const items = await getItemsByLocation(location.id);
+      console.log("[BROWSE] Loaded items count:", items.length);
       setLocationItems(items);
+      console.log("[BROWSE] Opening modal");
       setShowItemsModal(true);
+      console.log("[BROWSE] Modal state set to true");
     } catch (error) {
-      console.error("Failed to load items:", error);
+      console.error("[BROWSE] Failed to load items:", error);
       Alert.alert("Error", "Failed to load items");
     }
+  };
+
+  const handleLocationMenu = (location: Location) => {
+    const hasItems = itemCounts[location.id] > 0;
+    const isAdmin = user?.role === "admin";
+    const hasLocationCode = !!location.location_code;
+
+    const options: string[] = [];
+    const actions: (() => void)[] = [];
+
+    // Add View Items option
+    if (hasItems) {
+      options.push("View Items");
+      actions.push(() => handleViewItems(location));
+    }
+
+    // Add Print Labels option
+    if (isAdmin && hasLocationCode) {
+      options.push("Print Labels");
+      actions.push(() => handlePrintLabels(location));
+    }
+
+    // Add Rename option
+    if (isAdmin) {
+      options.push("Rename");
+      actions.push(() => {
+        setSelectedLocation(location);
+        setEditLocationName(location.name);
+        setShowEditModal(true);
+      });
+    }
+
+    // Add Disable option
+    if (isAdmin) {
+      options.push("Disable Location");
+      actions.push(() => handleDisableLocation(location));
+    }
+
+    // Add Cancel option
+    options.push("Cancel");
+    const cancelButtonIndex = options.length - 1;
+
+    // Determine destructive button index (Disable Location)
+    const destructiveButtonIndex = isAdmin ? options.length - 2 : undefined;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex,
+        title: location.name,
+        message: hasItems ? `${itemCounts[location.id]} items in this location` : "No items",
+      },
+      (selectedIndex?: number) => {
+        if (selectedIndex !== undefined && selectedIndex < actions.length) {
+          actions[selectedIndex]();
+        }
+      }
+    );
   };
 
   const handleAddLocation = async () => {
@@ -398,12 +463,12 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
           <View className="space-y-2">
             {locations.map((location) => (
               <View key={location.id} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                <Pressable
-                  onPress={() => handleLocationPress(location)}
-                  className="active:opacity-70"
-                >
-                  <View className="flex-row items-center justify-between mb-2">
-                    <View className="flex-1 flex-row items-center">
+                <View className="flex-row items-center justify-between">
+                  <Pressable
+                    onPress={() => handleLocationPress(location)}
+                    className="flex-1 active:opacity-70"
+                  >
+                    <View className="flex-row items-center">
                       <Ionicons
                         name={location.is_transit ? "swap-horizontal-outline" : "folder-outline"}
                         size={24}
@@ -415,7 +480,7 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
                         </Text>
                         {itemCounts[location.id] > 0 && (
                           <Text className="text-sm text-gray-600 mt-1">
-                            {itemCounts[location.id]} items
+                            {itemCounts[location.id]} item{itemCounts[location.id] !== 1 ? "s" : ""}
                           </Text>
                         )}
                         {location.is_transit && (
@@ -426,60 +491,17 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
                           </View>
                         )}
                       </View>
+                      <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                  </View>
-                </Pressable>
+                  </Pressable>
 
-                {/* Action Buttons */}
-                <View className="flex-row space-x-2 mt-2 pt-2 border-t border-gray-200">
-                  {itemCounts[location.id] > 0 && (
-                    <Pressable
-                      onPress={() => handleViewItems(location)}
-                      className="flex-1 bg-blue-100 rounded-lg py-2 active:bg-blue-200"
-                    >
-                      <Text className="text-blue-900 text-center text-sm font-medium">
-                        View Items
-                      </Text>
-                    </Pressable>
-                  )}
-                  {user?.role === "admin" && location.location_code && (
-                    <Pressable
-                      onPress={() => handlePrintLabels(location)}
-                      className="flex-1 bg-purple-100 rounded-lg py-2 active:bg-purple-200"
-                    >
-                      <View className="flex-row items-center justify-center">
-                        <Ionicons name="print-outline" size={16} color="#7C3AED" />
-                        <Text className="text-purple-900 text-center text-sm font-medium ml-1">
-                          Labels
-                        </Text>
-                      </View>
-                    </Pressable>
-                  )}
-                  {user?.role === "admin" && (
-                    <>
-                      <Pressable
-                        onPress={() => {
-                          setSelectedLocation(location);
-                          setEditLocationName(location.name);
-                          setShowEditModal(true);
-                        }}
-                        className="flex-1 bg-gray-200 rounded-lg py-2 active:bg-gray-300"
-                      >
-                        <Text className="text-gray-900 text-center text-sm font-medium">
-                          Rename
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => handleDisableLocation(location)}
-                        className="flex-1 bg-red-100 rounded-lg py-2 active:bg-red-200"
-                      >
-                        <Text className="text-red-900 text-center text-sm font-medium">
-                          Disable
-                        </Text>
-                      </Pressable>
-                    </>
-                  )}
+                  {/* Menu Button */}
+                  <Pressable
+                    onPress={() => handleLocationMenu(location)}
+                    className="ml-3 w-10 h-10 rounded-full bg-gray-200 items-center justify-center active:bg-gray-300"
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={20} color="#374151" />
+                  </Pressable>
                 </View>
               </View>
             ))}
@@ -643,20 +665,32 @@ export default function BrowseLocationsScreen({ navigation }: Props) {
                       setShowItemsModal(false);
                       navigation.navigate("InventoryItemDetail", { itemId: item.id });
                     }}
-                    className="bg-gray-50 rounded-xl p-4 border border-gray-200 active:bg-gray-100"
+                    className="bg-white rounded-xl p-4 border border-gray-200 active:bg-gray-100"
                   >
-                    <Text className="text-base font-semibold text-gray-900 mb-1">
-                      {item.inventory_number}
-                    </Text>
-                    {item.description && (
-                      <Text className="text-sm text-gray-600" numberOfLines={2}>
-                        {item.description}
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text className="text-xs font-medium text-blue-600">
+                        {item.inventory_number}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                    </View>
+
+                    {item.title && (
+                      <Text className="text-base font-semibold text-gray-900 mb-1">
+                        {item.title}
                       </Text>
                     )}
+
+                    <Text className="text-sm text-gray-600 mb-2" numberOfLines={2}>
+                      {item.description || "No description"}
+                    </Text>
+
                     {item.customer_name && (
-                      <Text className="text-sm text-gray-600 mt-1">
-                        Customer: {item.customer_name}
-                      </Text>
+                      <View className="flex-row items-center mt-2 pt-2 border-t border-gray-100">
+                        <Ionicons name="person-outline" size={14} color="#6B7280" />
+                        <Text className="text-xs text-gray-500 ml-1">
+                          {item.customer_name}
+                        </Text>
+                      </View>
                     )}
                   </Pressable>
                 ))}
