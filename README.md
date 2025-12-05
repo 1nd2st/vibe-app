@@ -65,6 +65,15 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
 ### **Latest Updates** (Dec 5, 2025)
+- ✅ **NEW: Enhanced Item Details with GPS & Photo Management!**
+  - Full-screen photo viewer with metadata (timestamp, GPS coordinates, source)
+  - Add photos from Item Details (camera or gallery) with GPS capture
+  - Complete CRUD for photo notes (create, read, edit, delete)
+  - Permission-based photo deletion (collection photos locked, added photos deletable)
+  - Visual badges: 📝 notes, 🎨 annotations, 📍 GPS, + added later
+  - ItemHistory logging for all photo and note operations
+  - Works seamlessly with admin/user role permissions
+  - Database migration v8 adds GPS coordinates and source tracking
 - ✅ **NEW: Item Photos Gallery View with Zoom!**
   - Added "View Pictures" button to Inventory Item Detail screen
   - Shows photo count badge (e.g., "View Pictures (5)")
