@@ -11,8 +11,10 @@ interface PhotoViewerModalProps {
   onClose: () => void;
   onEdit?: (photoId: string) => void;
   onDelete?: (photoId: string) => void;
+  onAdd?: () => void;
   canEdit?: boolean;
   canDelete?: boolean;
+  canAdd?: boolean;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -24,8 +26,10 @@ export default function PhotoViewerModal({
   onClose,
   onEdit,
   onDelete,
+  onAdd,
   canEdit = false,
   canDelete = false,
+  canAdd = false,
 }: PhotoViewerModalProps) {
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -87,7 +91,13 @@ export default function PhotoViewerModal({
             <Text className="text-white text-lg font-semibold">
               {currentIndex + 1} / {photos.length}
             </Text>
-            <View className="w-8" />
+            {canAdd && onAdd ? (
+              <Pressable onPress={onAdd} className="active:opacity-70">
+                <Ionicons name="add-circle" size={32} color="#10B981" />
+              </Pressable>
+            ) : (
+              <View className="w-8" />
+            )}
           </View>
         </View>
 

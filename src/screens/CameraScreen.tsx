@@ -10,8 +10,11 @@ import type { RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/RootNavigator";
 import type { ItemPhoto, CollectionItem } from "../types/collection";
 import { analyzeImageForDamage } from "../services/aiDamageDetection";
-import { addPhotoToCollectionItem, getCollectionItemByUuid } from "../database/db-collections";
+import { addPhotoToCollectionItem, getCollectionItemByUuid, getCollectionByUuid } from "../database/db-collections";
+import { getItemPhotos } from "../database/db-enhanced";
+import { useAuthStore } from "../state/authStore";
 import * as FileSystem from "expo-file-system";
+import * as SQLite from "expo-sqlite";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Camera">;
@@ -20,7 +23,7 @@ type Props = {
 
 export default function CameraScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
-  const { collectionId, itemId } = route.params;
+  const { collectionId, itemId, context = "collection" } = route.params;
   const cameraRef = useRef<CameraView>(null);
   const isMountedRef = useRef(true);
   const isCapturingRef = useRef(false);
@@ -35,6 +38,7 @@ export default function CameraScreen({ navigation, route }: Props) {
   const [noteText, setNoteText] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const [item, setItem] = useState<CollectionItem | null>(null);
+  const [collection, setCollection] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const aiAutoDetect = useSettingsStore((s) => s.settings.aiAutoDetect);
@@ -47,19 +51,28 @@ export default function CameraScreen({ navigation, route }: Props) {
     };
   }, []);
 
-  // Load item details from SQLite
+  // Load item and collection details (only for collection context)
   useEffect(() => {
-    const loadItem = async () => {
-      if (!itemId) return;
+    const loadData = async () => {
+      if (context !== "collection") return;
       try {
-        const itemData = await getCollectionItemByUuid(itemId);
-        setItem(itemData);
+        if (itemId) {
+          const itemData = await getCollectionItemByUuid(String(itemId));
+          setItem(itemData);
+        }
+        if (collectionId) {
+          const collectionData = await getCollectionByUuid(collectionId);
+          setCollection(collectionData);
+        }
       } catch (error) {
-        console.error("Failed to load item:", error);
+        console.error("Failed to load data:", error);
       }
     };
-    loadItem();
-  }, [itemId]);
+    loadData();
+  }, [itemId, collectionId, context]);
+
+  // Check if collection is locked
+  const collectionIsLocked = collection?.status === "completed" || collection?.status === "signed";
 
   if (!permission) {
     return <View className="flex-1 bg-black" />;
@@ -147,8 +160,8 @@ export default function CameraScreen({ navigation, route }: Props) {
             aiAnalyzed: false,
             latitude,
             longitude,
-            source: "collection_flow",
-            isLocked: true, // Photos from collection flow are locked by default
+            source: collectionIsLocked ? "added_later" : "collection_flow",
+            isLocked: !collectionIsLocked, // Locked if from collection_flow, unlocked if added_later
           };
 
           // Add photo to array immediately
@@ -236,64 +249,112 @@ export default function CameraScreen({ navigation, route }: Props) {
 
   const handleFinish = async () => {
     if (!itemId || photos.length === 0) {
-      // Navigate back even if no photos
-      navigation.reset({
-        index: 0,
-        routes: [
-          { name: "CollectionDetail" as const, params: { collectionId } },
-        ],
-      });
+      // Navigate back based on context
+      if (context === "inventory") {
+        navigation.goBack();
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [
+            { name: "CollectionDetail" as const, params: { collectionId: collectionId! } },
+          ],
+        });
+      }
       return;
     }
 
     setIsSaving(true);
+    const { user } = useAuthStore.getState();
+
     try {
       // Verify file URIs exist before saving
-      console.log(`[CAMERA] Saving ${photos.length} photos for item ${itemId}`);
+      console.log(`[CAMERA] Saving ${photos.length} photos for item ${itemId} (context: ${context})`);
 
-      // Save each photo to SQLite
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        console.log(`[CAMERA] Saving photo ${i + 1}/${photos.length}: ${photo.uri}`);
+      if (context === "inventory") {
+        // Save to ItemPhoto table for inventory
+        const database = SQLite.openDatabaseSync("inventory.db");
 
-        try {
-          // Check if file exists before saving
-          const fileInfo = await FileSystem.getInfoAsync(photo.uri);
-          if (!fileInfo.exists) {
-            console.error(`[CAMERA] Photo file does not exist: ${photo.uri}`);
-            continue; // Skip this photo but continue with others
+        for (let i = 0; i < photos.length; i++) {
+          const photo = photos[i];
+          console.log(`[CAMERA] Saving inventory photo ${i + 1}/${photos.length}: ${photo.uri}`);
+
+          try {
+            // Check if file exists before saving
+            const fileInfo = await FileSystem.getInfoAsync(photo.uri);
+            if (!fileInfo.exists) {
+              console.error(`[CAMERA] Photo file does not exist: ${photo.uri}`);
+              continue;
+            }
+
+            const photoUuid = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const timestamp = new Date().toISOString();
+
+            await database.runAsync(
+              `INSERT INTO ItemPhoto (uuid, item_id, uri, timestamp, latitude, longitude)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [photoUuid, Number(itemId), photo.uri, timestamp, photo.latitude || null, photo.longitude || null]
+            );
+
+            // Log to history
+            await database.runAsync(
+              `INSERT INTO ItemHistory (item_id, user_id, action_type, notes)
+               VALUES (?, ?, 'PHOTO_ADDED', 'Photo added via camera')`,
+              [Number(itemId), user?.id || null]
+            );
+
+            console.log(`[CAMERA] Successfully saved inventory photo ${i + 1}`);
+          } catch (photoError) {
+            console.error(`[CAMERA] Failed to save photo ${i + 1}:`, photoError);
           }
+        }
+      } else {
+        // Save to CollectionItemPhoto table for collections
+        for (let i = 0; i < photos.length; i++) {
+          const photo = photos[i];
+          console.log(`[CAMERA] Saving collection photo ${i + 1}/${photos.length}: ${photo.uri}`);
 
-          await addPhotoToCollectionItem(itemId, {
-            uri: photo.uri,
-            timestamp: photo.timestamp,
-            conditionNotes: photo.conditionNotes,
-            aiDetectedDamage: photo.aiDetectedDamage,
-            aiAnalyzed: photo.aiAnalyzed,
-            annotationData: photo.annotationData,
-            annotatedImageUri: photo.annotatedImageUri,
-            latitude: photo.latitude,
-            longitude: photo.longitude,
-            source: photo.source,
-            isLocked: photo.isLocked,
-          });
+          try {
+            // Check if file exists before saving
+            const fileInfo = await FileSystem.getInfoAsync(photo.uri);
+            if (!fileInfo.exists) {
+              console.error(`[CAMERA] Photo file does not exist: ${photo.uri}`);
+              continue;
+            }
 
-          console.log(`[CAMERA] Successfully saved photo ${i + 1}`);
-        } catch (photoError) {
-          console.error(`[CAMERA] Failed to save photo ${i + 1}:`, photoError);
-          // Continue with next photo instead of failing completely
+            await addPhotoToCollectionItem(String(itemId), {
+              uri: photo.uri,
+              timestamp: photo.timestamp,
+              conditionNotes: photo.conditionNotes,
+              aiDetectedDamage: photo.aiDetectedDamage,
+              aiAnalyzed: photo.aiAnalyzed,
+              annotationData: photo.annotationData,
+              annotatedImageUri: photo.annotatedImageUri,
+              latitude: photo.latitude,
+              longitude: photo.longitude,
+              source: photo.source,
+              isLocked: photo.isLocked,
+            });
+
+            console.log(`[CAMERA] Successfully saved collection photo ${i + 1}`);
+          } catch (photoError) {
+            console.error(`[CAMERA] Failed to save photo ${i + 1}:`, photoError);
+          }
         }
       }
 
       console.log("[CAMERA] All photos saved, navigating back");
 
-      // Navigate back to CollectionDetail, removing both Camera and AddItem from stack
-      navigation.reset({
-        index: 0,
-        routes: [
-          { name: "CollectionDetail" as const, params: { collectionId } },
-        ],
-      });
+      // Navigate back based on context
+      if (context === "inventory") {
+        navigation.goBack();
+      } else {
+        navigation.reset({
+          index: 0,
+          routes: [
+            { name: "CollectionDetail" as const, params: { collectionId: collectionId! } },
+          ],
+        });
+      }
     } catch (error) {
       console.error("[CAMERA] Failed to save photos:", error);
       Alert.alert("Error", `Failed to save photos: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`);

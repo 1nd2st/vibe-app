@@ -321,7 +321,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
 
         {/* Quick Actions */}
         <View className="mb-4">
-          {/* First Row - 3 buttons */}
+          {/* First Row - 4 buttons */}
           <View className="flex-row space-x-3 mb-3">
             <Pressable
               onPress={() => setShowLocationPicker(true)}
@@ -344,23 +344,19 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
               <Ionicons name="print" size={24} color="#EA580C" />
               <Text className="text-sm font-semibold text-orange-900 mt-1">Print Label</Text>
             </Pressable>
-          </View>
-
-          {/* Second Row - Pictures Button (Full Width, Always Visible) */}
-          <Pressable
-            onPress={() => {
-              setSelectedPhotoIndex(0);
-              setShowPhotosModal(true);
-            }}
-            className="bg-green-100 rounded-xl p-4 items-center active:bg-green-200"
-          >
-            <View className="flex-row items-center">
+            <Pressable
+              onPress={() => {
+                setSelectedPhotoIndex(0);
+                setShowPhotosModal(true);
+              }}
+              className="flex-1 bg-green-100 rounded-xl p-4 items-center active:bg-green-200"
+            >
               <Ionicons name="images" size={24} color="#16A34A" />
-              <Text className="text-sm font-semibold text-green-900 ml-2">
-                Item Pictures ({photos.length})
+              <Text className="text-sm font-semibold text-green-900 mt-1">
+                Photos ({photos.length})
               </Text>
-            </View>
-          </Pressable>
+            </Pressable>
+          </View>
         </View>
 
         {/* History Section */}
@@ -601,7 +597,17 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
             <Text className="text-lg font-semibold text-white">
               {photos.length > 0 ? `${selectedPhotoIndex + 1} / ${photos.length}` : "No Photos"}
             </Text>
-            <View style={{ width: 28 }} />
+            <Pressable
+              onPress={() => {
+                setShowPhotosModal(false);
+                (navigation as any).navigate("Camera", {
+                  context: "inventory",
+                  itemId: itemId,
+                });
+              }}
+            >
+              <Ionicons name="add-circle" size={28} color="#10B981" />
+            </Pressable>
           </View>
 
           {/* Photo Viewer or Empty State */}
@@ -706,8 +712,23 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
                 No Photos Yet
               </Text>
               <Text className="text-gray-500 text-center mt-2 mb-6">
-                Photos were not taken during collection
+                Take photos to document this item
               </Text>
+              <Pressable
+                onPress={() => {
+                  setShowPhotosModal(false);
+                  (navigation as any).navigate("Camera", {
+                    context: "inventory",
+                    itemId: itemId,
+                  });
+                }}
+                className="bg-green-600 rounded-xl px-8 py-4 active:bg-green-700"
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="camera" size={20} color="#FFFFFF" />
+                  <Text className="text-white text-lg font-semibold ml-2">Take Photos</Text>
+                </View>
+              </Pressable>
             </View>
           )}
         </SafeAreaView>

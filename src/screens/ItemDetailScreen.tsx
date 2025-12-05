@@ -724,8 +724,17 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             }
           }}
           onDelete={handleDeletePhoto}
+          onAdd={() => {
+            setShowPhotoViewer(false);
+            navigation.navigate("Camera", {
+              collectionId,
+              itemId,
+              context: "collection",
+            });
+          }}
           canEdit={canEditNotes}
           canDelete={true} // Permission check is done in handleDeletePhoto
+          canAdd={true} // Can always add photos to collections (even when locked)
         />
       )}
 

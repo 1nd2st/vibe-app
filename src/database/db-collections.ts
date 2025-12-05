@@ -739,6 +739,9 @@ async function getCollectionItemPhotos(collectionItemId: number): Promise<ItemPh
     longitude: row.longitude,
     source: (row.source || "collection_flow") as "collection_flow" | "added_later",
     isLocked: row.is_locked === 1,
+    originalNote: row.original_note,
+    noteEditedAt: row.note_edited_at,
+    noteEditedBy: row.note_edited_by,
   }));
 }
 

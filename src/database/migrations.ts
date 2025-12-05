@@ -782,6 +782,22 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_photo_deleted ON CollectionItemPhoto(deleted_at);
     `,
   },
+  {
+    version: 9,
+    name: "add_note_edit_tracking",
+    up: `
+      -- Migration 9: Add note edit tracking to preserve original notes
+      -- When notes are edited after signature, we preserve the original
+
+      -- Add fields to track note edits
+      ALTER TABLE CollectionItemPhoto ADD COLUMN original_note TEXT;
+      ALTER TABLE CollectionItemPhoto ADD COLUMN note_edited_at TEXT;
+      ALTER TABLE CollectionItemPhoto ADD COLUMN note_edited_by INTEGER REFERENCES User(id);
+
+      -- Create index for note edit queries
+      CREATE INDEX IF NOT EXISTS idx_photo_note_edited ON CollectionItemPhoto(note_edited_at);
+    `,
+  },
 ];
 
 // Get current schema version

@@ -39,6 +39,9 @@ export interface ItemPhoto {
   longitude?: number; // GPS longitude coordinate
   source: "collection_flow" | "added_later"; // Where the photo was taken
   isLocked: boolean; // Whether the photo can be deleted by regular users
+  originalNote?: string; // Original note before any edits
+  noteEditedAt?: string; // Timestamp when note was last edited
+  noteEditedBy?: number; // User ID who edited the note
 }
 
 export interface CollectionItem {
