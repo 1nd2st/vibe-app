@@ -64,7 +64,13 @@ Track and manage warehouse inventory with barcode scanning, location hierarchies
 
 ## ✨ Recent UI/UX Improvements (Mobile-Optimized)
 
-### **Latest Updates** (Dec 5, 2025)
+### **Latest Updates** (Dec 6, 2025)
+- ✅ **FIXED: Camera Photo GPS Schema Error** - Migration v10 applied
+  - Fixed "table ItemPhoto has no column named latitude" error
+  - Added migration v10 to add GPS coordinates (latitude, longitude) to ItemPhoto table
+  - Camera can now successfully save inventory photos with location data
+  - Database automatically upgrades on app restart
+  - Photos with GPS coordinates now work for both collection and inventory contexts
 - ✅ **NEW: Enhanced Item Details with GPS & Photo Management!**
   - Full-screen photo viewer with metadata (timestamp, GPS coordinates, source)
   - Add photos from Item Details (camera or gallery) with GPS capture
