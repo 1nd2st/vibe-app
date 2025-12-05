@@ -735,6 +735,10 @@ async function getCollectionItemPhotos(collectionItemId: number): Promise<ItemPh
     aiAnalyzed: row.ai_analyzed === 1,
     annotationData: row.annotation_data,
     annotatedImageUri: row.annotated_image_uri,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    source: (row.source || "collection_flow") as "collection_flow" | "added_later",
+    isLocked: row.is_locked === 1,
   }));
 }
 
@@ -748,8 +752,9 @@ async function addCollectionItemPhoto(
   await database.runAsync(
     `INSERT INTO CollectionItemPhoto (
       uuid, collection_item_id, uri, timestamp, condition_notes,
-      ai_detected_damage, ai_analyzed, annotation_data, annotated_image_uri
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ai_detected_damage, ai_analyzed, annotation_data, annotated_image_uri,
+      latitude, longitude, source, is_locked
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       uuid,
       collectionItemId,
@@ -760,6 +765,10 @@ async function addCollectionItemPhoto(
       photoData.aiAnalyzed ? 1 : 0,
       photoData.annotationData || null,
       photoData.annotatedImageUri || null,
+      photoData.latitude || null,
+      photoData.longitude || null,
+      photoData.source || "collection_flow",
+      photoData.isLocked ? 1 : 0,
     ]
   );
 

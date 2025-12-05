@@ -756,6 +756,32 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_history_user ON ItemHistory(user_id);
     `,
   },
+  {
+    version: 8,
+    name: "add_photo_gps_and_source_tracking",
+    up: `
+      -- Migration 8: Add GPS coordinates and source tracking to photos
+      -- Also add action types for note and photo operations in ItemHistory
+
+      -- Add GPS and source fields to CollectionItemPhoto
+      ALTER TABLE CollectionItemPhoto ADD COLUMN latitude REAL;
+      ALTER TABLE CollectionItemPhoto ADD COLUMN longitude REAL;
+      ALTER TABLE CollectionItemPhoto ADD COLUMN source TEXT DEFAULT 'collection_flow' CHECK(source IN ('collection_flow', 'added_later'));
+      ALTER TABLE CollectionItemPhoto ADD COLUMN is_locked INTEGER DEFAULT 1;
+      ALTER TABLE CollectionItemPhoto ADD COLUMN deleted_at TEXT;
+
+      -- Update ItemHistory action_type to include more granular actions
+      -- Note: SQLite doesn't support modifying CHECK constraints, so we'll rely on application logic
+      -- The existing CHECK constraint already allows these action types we'll use:
+      -- For notes: 'NOTE' (already exists)
+      -- For photos: 'PHOTO_ADDED', 'UPDATED' (already exist)
+      -- We'll add: NOTE_ADDED, NOTE_EDITED, NOTE_DELETED, PHOTO_DELETED
+
+      -- Create index for photo source queries
+      CREATE INDEX IF NOT EXISTS idx_photo_source ON CollectionItemPhoto(source);
+      CREATE INDEX IF NOT EXISTS idx_photo_deleted ON CollectionItemPhoto(deleted_at);
+    `,
+  },
 ];
 
 // Get current schema version

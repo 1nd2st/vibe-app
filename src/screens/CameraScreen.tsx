@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, Pressable, TextInput, Modal, FlatList, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert } from "react-native";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
+import * as Location from "expo-location";
 import { useSettingsStore } from "../state/settingsStore";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +26,7 @@ export default function CameraScreen({ navigation, route }: Props) {
   const isCapturingRef = useRef(false);
 
   const [permission, requestPermission] = useCameraPermissions();
+  const [locationPermission, requestLocationPermission] = Location.useForegroundPermissions();
   const [facing, setFacing] = useState<CameraType>("back");
   const [flash, setFlash] = useState(false);
   const [photos, setPhotos] = useState<ItemPhoto[]>([]);
@@ -99,6 +101,24 @@ export default function CameraScreen({ navigation, route }: Props) {
       if (photo) {
         console.log("[CAMERA] Photo captured:", photo.uri);
 
+        // Capture GPS location if permission granted
+        let latitude: number | undefined;
+        let longitude: number | undefined;
+
+        if (locationPermission?.granted) {
+          try {
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            latitude = location.coords.latitude;
+            longitude = location.coords.longitude;
+            console.log("[CAMERA] GPS captured:", latitude, longitude);
+          } catch (locationError) {
+            console.log("[CAMERA] Failed to get GPS location:", locationError);
+            // Continue without GPS - not critical
+          }
+        }
+
         // Copy photo to permanent location
         const photoId = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const permanentFileName = `${photoId}.jpg`;
@@ -122,9 +142,13 @@ export default function CameraScreen({ navigation, route }: Props) {
 
           const newPhoto: ItemPhoto = {
             id: photoId,
-            uri: permanentUri, // Use permanent URI instead of temp URI
+            uri: permanentUri,
             timestamp: Date.now(),
             aiAnalyzed: false,
+            latitude,
+            longitude,
+            source: "collection_flow",
+            isLocked: true, // Photos from collection flow are locked by default
           };
 
           // Add photo to array immediately
@@ -248,6 +272,10 @@ export default function CameraScreen({ navigation, route }: Props) {
             aiAnalyzed: photo.aiAnalyzed,
             annotationData: photo.annotationData,
             annotatedImageUri: photo.annotatedImageUri,
+            latitude: photo.latitude,
+            longitude: photo.longitude,
+            source: photo.source,
+            isLocked: photo.isLocked,
           });
 
           console.log(`[CAMERA] Successfully saved photo ${i + 1}`);

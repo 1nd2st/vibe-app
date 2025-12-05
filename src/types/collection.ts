@@ -35,6 +35,10 @@ export interface ItemPhoto {
   annotatedUri?: string; // Annotated version of the photo (deprecated - use annotationData)
   annotationData?: string; // JSON string of annotation paths and metadata
   annotatedImageUri?: string; // Composite image with annotations drawn on top
+  latitude?: number; // GPS latitude coordinate
+  longitude?: number; // GPS longitude coordinate
+  source: "collection_flow" | "added_later"; // Where the photo was taken
+  isLocked: boolean; // Whether the photo can be deleted by regular users
 }
 
 export interface CollectionItem {
