@@ -97,64 +97,85 @@ export default function CameraScreen({ navigation, route }: Props) {
       }
 
       if (photo) {
+        console.log("[CAMERA] Photo captured:", photo.uri);
+
         // Copy photo to permanent location
         const photoId = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const permanentFileName = `${photoId}.jpg`;
         const permanentUri = `${FileSystem.documentDirectory}${permanentFileName}`;
 
-        await FileSystem.copyAsync({
-          from: photo.uri,
-          to: permanentUri,
-        });
+        console.log("[CAMERA] Copying photo to permanent location:", permanentUri);
 
-        const newPhoto: ItemPhoto = {
-          id: photoId,
-          uri: permanentUri, // Use permanent URI instead of temp URI
-          timestamp: Date.now(),
-          aiAnalyzed: false,
-        };
+        try {
+          await FileSystem.copyAsync({
+            from: photo.uri,
+            to: permanentUri,
+          });
 
-        // Add photo to array immediately
-        setPhotos((prevPhotos) => [...prevPhotos, newPhoto]);
+          // Verify the file was copied successfully
+          const fileInfo = await FileSystem.getInfoAsync(permanentUri);
+          if (!fileInfo.exists) {
+            throw new Error("Failed to copy photo to permanent storage");
+          }
 
-        // Run AI analysis in background without blocking
-        if (aiEnabled && aiAutoDetect) {
-          // Use setTimeout to run AI analysis asynchronously without blocking UI
-          setTimeout(async () => {
-            if (!isMountedRef.current) return;
+          console.log("[CAMERA] Photo saved successfully, size:", fileInfo.size);
 
-            try {
-              const aiResult = await analyzeImageForDamage(permanentUri);
+          const newPhoto: ItemPhoto = {
+            id: photoId,
+            uri: permanentUri, // Use permanent URI instead of temp URI
+            timestamp: Date.now(),
+            aiAnalyzed: false,
+          };
 
-              // Check mount status again after async operation
+          // Add photo to array immediately
+          setPhotos((prevPhotos) => [...prevPhotos, newPhoto]);
+
+          // Run AI analysis in background without blocking
+          if (aiEnabled && aiAutoDetect) {
+            // Use setTimeout to run AI analysis asynchronously without blocking UI
+            setTimeout(async () => {
               if (!isMountedRef.current) return;
 
-              if (aiResult) {
-                // Update the specific photo with AI analysis
-                setPhotos((prevPhotos) => {
-                  const photoIndex = prevPhotos.findIndex((p) => p.id === newPhoto.id);
-                  if (photoIndex === -1) return prevPhotos;
+              try {
+                const aiResult = await analyzeImageForDamage(permanentUri);
 
-                  const updated = [...prevPhotos];
-                  updated[photoIndex] = {
-                    ...updated[photoIndex],
-                    aiDetectedDamage: aiResult,
-                    aiAnalyzed: true,
-                    conditionNotes: `[AI Analysis]\n${aiResult}`,
-                  };
-                  return updated;
-                });
+                // Check mount status again after async operation
+                if (!isMountedRef.current) return;
+
+                if (aiResult) {
+                  // Update the specific photo with AI analysis
+                  setPhotos((prevPhotos) => {
+                    const photoIndex = prevPhotos.findIndex((p) => p.id === newPhoto.id);
+                    if (photoIndex === -1) return prevPhotos;
+
+                    const updated = [...prevPhotos];
+                    updated[photoIndex] = {
+                      ...updated[photoIndex],
+                      aiDetectedDamage: aiResult,
+                      aiAnalyzed: true,
+                      conditionNotes: `[AI Analysis]\n${aiResult}`,
+                    };
+                    return updated;
+                  });
+                }
+              } catch (aiError) {
+                // Silently fail - don't block photo capture
+                console.error("[CAMERA] AI analysis failed:", aiError);
               }
-            } catch (aiError) {
-              // Silently fail - don't block photo capture
-            }
-          }, 100);
+            }, 100);
+          }
+        } catch (copyError) {
+          console.error("[CAMERA] Failed to copy photo:", copyError);
+          if (isMountedRef.current) {
+            Alert.alert("Error", "Failed to save photo. Please try again.");
+          }
         }
       }
     } catch (error) {
       if (isMountedRef.current) {
         // Only log error if component is still mounted
-        console.error("Error taking picture:", error);
+        console.error("[CAMERA] Error taking picture:", error);
+        Alert.alert("Error", `Failed to take photo: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     } finally {
       isCapturingRef.current = false;
@@ -203,18 +224,40 @@ export default function CameraScreen({ navigation, route }: Props) {
 
     setIsSaving(true);
     try {
+      // Verify file URIs exist before saving
+      console.log(`[CAMERA] Saving ${photos.length} photos for item ${itemId}`);
+
       // Save each photo to SQLite
-      for (const photo of photos) {
-        await addPhotoToCollectionItem(itemId, {
-          uri: photo.uri,
-          timestamp: photo.timestamp,
-          conditionNotes: photo.conditionNotes,
-          aiDetectedDamage: photo.aiDetectedDamage,
-          aiAnalyzed: photo.aiAnalyzed,
-          annotationData: photo.annotationData,
-          annotatedImageUri: photo.annotatedImageUri,
-        });
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        console.log(`[CAMERA] Saving photo ${i + 1}/${photos.length}: ${photo.uri}`);
+
+        try {
+          // Check if file exists before saving
+          const fileInfo = await FileSystem.getInfoAsync(photo.uri);
+          if (!fileInfo.exists) {
+            console.error(`[CAMERA] Photo file does not exist: ${photo.uri}`);
+            continue; // Skip this photo but continue with others
+          }
+
+          await addPhotoToCollectionItem(itemId, {
+            uri: photo.uri,
+            timestamp: photo.timestamp,
+            conditionNotes: photo.conditionNotes,
+            aiDetectedDamage: photo.aiDetectedDamage,
+            aiAnalyzed: photo.aiAnalyzed,
+            annotationData: photo.annotationData,
+            annotatedImageUri: photo.annotatedImageUri,
+          });
+
+          console.log(`[CAMERA] Successfully saved photo ${i + 1}`);
+        } catch (photoError) {
+          console.error(`[CAMERA] Failed to save photo ${i + 1}:`, photoError);
+          // Continue with next photo instead of failing completely
+        }
       }
+
+      console.log("[CAMERA] All photos saved, navigating back");
 
       // Navigate back to CollectionDetail, removing both Camera and AddItem from stack
       navigation.reset({
@@ -224,8 +267,8 @@ export default function CameraScreen({ navigation, route }: Props) {
         ],
       });
     } catch (error) {
-      console.error("Failed to save photos:", error);
-      Alert.alert("Error", "Failed to save photos. Please try again.");
+      console.error("[CAMERA] Failed to save photos:", error);
+      Alert.alert("Error", `Failed to save photos: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`);
     } finally {
       setIsSaving(false);
     }
