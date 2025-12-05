@@ -798,6 +798,21 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_photo_note_edited ON CollectionItemPhoto(note_edited_at);
     `,
   },
+  {
+    version: 10,
+    name: "add_gps_to_item_photo",
+    up: `
+      -- Migration 10: Add GPS coordinates to ItemPhoto table
+      -- This allows inventory photos to have location tracking
+
+      -- Add GPS fields to ItemPhoto
+      ALTER TABLE ItemPhoto ADD COLUMN latitude REAL;
+      ALTER TABLE ItemPhoto ADD COLUMN longitude REAL;
+
+      -- Create index for GPS queries
+      CREATE INDEX IF NOT EXISTS idx_item_photo_gps ON ItemPhoto(latitude, longitude);
+    `,
+  },
 ];
 
 // Get current schema version
