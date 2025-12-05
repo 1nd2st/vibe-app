@@ -32,7 +32,6 @@ import ScanPutAwayScreen from "./src/screens/ScanPutAwayScreen";
 import SearchItemScreen from "./src/screens/SearchItemScreen";
 import InventoryItemDetailScreen from "./src/screens/InventoryItemDetailScreen";
 import BrowseLocationsScreen from "./src/screens/BrowseLocationsScreen";
-import InventorySettingsScreen from "./src/screens/InventorySettingsScreen";
 import UserManagementScreen from "./src/screens/UserManagementScreen";
 import PasswordPolicyScreen from "./src/screens/PasswordPolicyScreen";
 import ChangePasswordScreen from "./src/screens/ChangePasswordScreen";
@@ -111,7 +110,6 @@ export default function App() {
                   <Stack.Screen name="SearchItem" component={SearchItemScreen} />
                   <Stack.Screen name="InventoryItemDetail" component={InventoryItemDetailScreen} />
                   <Stack.Screen name="BrowseLocations" component={BrowseLocationsScreen} />
-                  <Stack.Screen name="InventorySettings" component={InventorySettingsScreen} />
                   <Stack.Screen name="UserManagement" component={UserManagementScreen} />
                   <Stack.Screen name="PasswordPolicy" component={PasswordPolicyScreen} />
                   <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />

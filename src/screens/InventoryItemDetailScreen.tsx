@@ -12,8 +12,6 @@ import {
   Image,
   Dimensions,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -26,7 +24,6 @@ import {
   addItemNote,
   updateItemStatus,
   updateItemLocation,
-  addItemPhoto,
   deleteItemPhoto,
   type InventoryItem,
   type ItemHistory,
@@ -70,11 +67,6 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
   const [noteText, setNoteText] = useState("");
   const [labelSize, setLabelSize] = useState<LabelSize>("4x4");
   const [isPrinting, setIsPrinting] = useState(false);
-  const [isAddingPhoto, setIsAddingPhoto] = useState(false);
-
-  // Permissions
-  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
-  const [mediaPermission, requestMediaPermission] = ImagePicker.useMediaLibraryPermissions();
 
   useEffect(() => {
     loadItem();
@@ -128,104 +120,6 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
     } catch (error) {
       console.error("Failed to update status:", error);
       Alert.alert("Error", "Failed to update status");
-    }
-  };
-
-  const handleAddPhoto = async () => {
-    Alert.alert(
-      "Add Photo",
-      "Choose a source",
-      [
-        {
-          text: "Take Photo",
-          onPress: async () => {
-            if (!cameraPermission?.granted) {
-              const result = await requestCameraPermission();
-              if (!result.granted) {
-                Alert.alert("Permission Required", "Camera permission is required");
-                return;
-              }
-            }
-
-            try {
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                quality: 0.8,
-                allowsEditing: false,
-              });
-
-              if (!result.canceled && result.assets[0]) {
-                await processAndAddPhoto(result.assets[0].uri);
-              }
-            } catch (error) {
-              console.error("Failed to take photo:", error);
-              Alert.alert("Error", "Failed to take photo");
-            }
-          },
-        },
-        {
-          text: "Choose from Library",
-          onPress: async () => {
-            if (!mediaPermission?.granted) {
-              const result = await requestMediaPermission();
-              if (!result.granted) {
-                Alert.alert("Permission Required", "Media library permission is required");
-                return;
-              }
-            }
-
-            try {
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                quality: 0.8,
-                allowsEditing: false,
-                allowsMultipleSelection: true,
-              });
-
-              if (!result.canceled) {
-                for (const asset of result.assets) {
-                  await processAndAddPhoto(asset.uri);
-                }
-              }
-            } catch (error) {
-              console.error("Failed to select photo:", error);
-              Alert.alert("Error", "Failed to select photo");
-            }
-          },
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]
-    );
-  };
-
-  const processAndAddPhoto = async (sourceUri: string) => {
-    if (!user) return;
-
-    setIsAddingPhoto(true);
-    try {
-      // Copy to permanent storage
-      const photoId = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const permanentUri = `${FileSystem.documentDirectory}${photoId}.jpg`;
-
-      await FileSystem.copyAsync({
-        from: sourceUri,
-        to: permanentUri,
-      });
-
-      // Add to database
-      await addItemPhoto(itemId, permanentUri, user.id);
-
-      // Reload photos
-      await loadItem();
-      Alert.alert("Success", "Photo added successfully");
-    } catch (error) {
-      console.error("Failed to add photo:", error);
-      Alert.alert("Error", "Failed to add photo");
-    } finally {
-      setIsAddingPhoto(false);
     }
   };
 
@@ -707,13 +601,7 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
             <Text className="text-lg font-semibold text-white">
               {photos.length > 0 ? `${selectedPhotoIndex + 1} / ${photos.length}` : "No Photos"}
             </Text>
-            <Pressable onPress={handleAddPhoto} disabled={isAddingPhoto}>
-              {isAddingPhoto ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Ionicons name="add-circle" size={28} color="#10B981" />
-              )}
-            </Pressable>
+            <View style={{ width: 28 }} />
           </View>
 
           {/* Photo Viewer or Empty State */}
@@ -818,22 +706,8 @@ export default function InventoryItemDetailScreen({ route, navigation }: Props) 
                 No Photos Yet
               </Text>
               <Text className="text-gray-500 text-center mt-2 mb-6">
-                {"Add photos to document this item's condition"}
+                Photos were not taken during collection
               </Text>
-              <Pressable
-                onPress={handleAddPhoto}
-                disabled={isAddingPhoto}
-                className="bg-green-600 rounded-xl px-8 py-4 active:bg-green-700"
-              >
-                {isAddingPhoto ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <View className="flex-row items-center">
-                    <Ionicons name="camera" size={20} color="#FFFFFF" />
-                    <Text className="text-white text-lg font-semibold ml-2">Add First Photo</Text>
-                  </View>
-                )}
-              </Pressable>
             </View>
           )}
         </SafeAreaView>

@@ -1208,6 +1208,37 @@ All data is stored locally using AsyncStorage and persists between app sessions.
 
 ## Latest Updates & Fixes (December 2025)
 
+### ✅ Code Cleanup - Unified Settings & Removed Duplicates (December 5th)
+**Status**: Production-ready
+
+**What Changed**:
+1. **Merged Settings Screens**
+   - Combined `SettingsScreen` and `InventorySettingsScreen` into ONE unified Settings
+   - Settings now accessible from both Collections and Inventory
+   - Includes: Administration (User Management, Password Policy), Account (Change Password), General, AI Damage Detection, and Zebra Printer Setup
+   - Admin-only sections properly protected with role checks
+
+2. **Removed Duplicate Photo Code**
+   - Removed duplicate ImagePicker implementation from InventoryItemDetailScreen
+   - Removed unused `addItemPhoto` function from db-enhanced.ts
+   - Simplified photo viewing - Inventory shows photos taken during collection
+   - No duplicate camera/photo functionality
+
+3. **Navigation Cleanup**
+   - Removed `InventorySettings` route from navigation
+   - All Settings navigation now points to unified Settings screen
+   - Cleaner navigation structure
+
+**Files Modified**:
+- `src/screens/SettingsScreen.tsx` - Merged both Settings screens
+- `src/screens/InventoryItemDetailScreen.tsx` - Removed ImagePicker code
+- `src/database/db-enhanced.ts` - Removed `addItemPhoto` function
+- `App.tsx` - Removed InventorySettingsScreen registration
+- `src/navigation/HomeNavigator.tsx` - Removed InventorySettings type
+
+**Files Deleted**:
+- `src/screens/InventorySettingsScreen.tsx` - No longer needed
+
 ### ✅ COMPLETED IMPLEMENTATIONS (Current Session - December 2nd)
 
 #### **Critical Bug Fixes - Annotations & Signatures** 🔧

@@ -1323,31 +1323,6 @@ export async function getItemPhotos(itemId: number): Promise<ItemPhoto[]> {
   }));
 }
 
-export async function addItemPhoto(
-  itemId: number,
-  uri: string,
-  userId: number | null
-): Promise<string> {
-  const database = getDB();
-  const uuid = `PHOTO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const timestamp = new Date().toISOString();
-
-  await database.runAsync(
-    `INSERT INTO ItemPhoto (uuid, item_id, uri, timestamp)
-     VALUES (?, ?, ?, ?)`,
-    [uuid, itemId, uri, timestamp]
-  );
-
-  // Log to history
-  await database.runAsync(
-    `INSERT INTO ItemHistory (item_id, user_id, action_type, notes)
-     VALUES (?, ?, 'PHOTO_ADDED', 'Photo added')`,
-    [itemId, userId]
-  );
-
-  return uuid;
-}
-
 export async function deleteItemPhoto(
   photoUuid: string,
   userId: number | null
