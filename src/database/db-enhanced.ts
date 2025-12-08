@@ -170,15 +170,24 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 export async function initDatabase(): Promise<void> {
   try {
-    db = await SQLite.openDatabaseAsync("inventory.db");
+    // Add timeout to prevent infinite hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Database initialization timeout")), 10000);
+    });
 
-    // Run migrations
-    await runMigrations(db);
+    const initPromise = (async () => {
+      db = await SQLite.openDatabaseAsync("inventory.db");
 
-    // Initialize admin user with proper hashing if not exists
-    await initializeAdminUser();
+      // Run migrations
+      await runMigrations(db);
 
-    console.log("✅ Database initialized successfully");
+      // Initialize admin user with proper hashing if not exists
+      await initializeAdminUser();
+
+      console.log("✅ Database initialized successfully");
+    })();
+
+    await Promise.race([initPromise, timeoutPromise]);
   } catch (error) {
     console.error("❌ Database initialization failed:", error);
 

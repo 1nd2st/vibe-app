@@ -1,4 +1,5 @@
 import { StatusBar } from "expo-status-bar";
+import { View, Text, Pressable } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -65,16 +66,68 @@ const Stack = createNativeStackNavigator<AppStackParamList>();
 export default function App() {
   const { isAuthenticated, initializeDB } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Initialize database on app start
-    initializeDB().then(() => {
-      setIsReady(true);
-    });
+    const initialize = async () => {
+      try {
+        await initializeDB();
+        setIsReady(true);
+      } catch (err) {
+        console.error("Failed to initialize app:", err);
+        setError(err instanceof Error ? err.message : "Failed to initialize app");
+        // Set ready anyway to prevent infinite loading
+        setIsReady(true);
+      }
+    };
+
+    initialize();
   }, []);
 
   if (!isReady) {
-    return null; // Or a loading screen
+    // Show a minimal loading screen
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
+        <Text style={{ fontSize: 18, color: "#000" }}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    // Show error screen instead of crashing
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff", padding: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: "bold", color: "#d32f2f", marginBottom: 10 }}>
+          Initialization Error
+        </Text>
+        <Text style={{ fontSize: 14, color: "#666", textAlign: "center" }}>
+          {error}
+        </Text>
+        <Pressable
+          onPress={() => {
+            setError(null);
+            setIsReady(false);
+            setTimeout(() => {
+              const initialize = async () => {
+                try {
+                  await initializeDB();
+                  setIsReady(true);
+                } catch (err) {
+                  console.error("Failed to initialize app:", err);
+                  setError(err instanceof Error ? err.message : "Failed to initialize app");
+                  setIsReady(true);
+                }
+              };
+              initialize();
+            }, 100);
+          }}
+          style={{ marginTop: 20, backgroundColor: "#2196F3", padding: 12, borderRadius: 8 }}
+        >
+          <Text style={{ color: "#fff", fontSize: 16 }}>Retry</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   return (
