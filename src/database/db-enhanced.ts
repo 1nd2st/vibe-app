@@ -170,19 +170,27 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 export async function initDatabase(): Promise<void> {
   try {
-    // Add timeout to prevent infinite hanging
+    console.log("🚀 Starting database initialization...");
+
+    // Increase timeout for Android devices (30 seconds)
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Database initialization timeout")), 10000);
+      setTimeout(() => reject(new Error("Database initialization timeout after 30s")), 30000);
     });
 
     const initPromise = (async () => {
+      console.log("📂 Opening database...");
       db = await SQLite.openDatabaseAsync("inventory.db");
+      console.log("✅ Database opened");
 
+      console.log("🔄 Running migrations...");
       // Run migrations
       await runMigrations(db);
+      console.log("✅ Migrations completed");
 
+      console.log("👤 Initializing admin user...");
       // Initialize admin user with proper hashing if not exists
       await initializeAdminUser();
+      console.log("✅ Admin user initialized");
 
       console.log("✅ Database initialized successfully");
     })();
@@ -190,10 +198,11 @@ export async function initDatabase(): Promise<void> {
     await Promise.race([initPromise, timeoutPromise]);
   } catch (error) {
     console.error("❌ Database initialization failed:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error details:", errorMessage);
 
     // If we get a "no such column: warehouse_id" error, the database schema is corrupted
     // Delete and recreate the database
-    const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes("no such column: warehouse_id") || errorMessage.includes("table order")) {
       console.log("🔄 Detected schema corruption. Deleting and recreating database...");
       try {
@@ -220,33 +229,44 @@ export async function initDatabase(): Promise<void> {
         return;
       } catch (resetError) {
         console.error("❌ Failed to reset database:", resetError);
-        throw resetError;
+        const resetErrorMsg = resetError instanceof Error ? resetError.message : String(resetError);
+        throw new Error(`Database reset failed: ${resetErrorMsg}`);
       }
     }
 
-    throw error;
+    // Don't throw generic errors, wrap them with more context
+    throw new Error(`Database init failed: ${errorMessage}`);
   }
 }
 
 async function initializeAdminUser(): Promise<void> {
   const database = getDB();
 
-  // Check if admin exists
-  const admin = await database.getFirstAsync<User>(
-    "SELECT * FROM User WHERE username = ?",
-    ["admin"]
-  );
-
-  if (admin && admin.password_hash === "temp_hash") {
-    // Replace temp admin with properly hashed password
-    const salt = await generateSalt();
-    const hash = await hashPassword("admin", salt);
-
-    await database.runAsync(
-      "UPDATE User SET password_hash = ?, password_salt = ? WHERE id = ?",
-      [hash, salt, admin.id]
+  try {
+    // Check if admin exists
+    const admin = await database.getFirstAsync<User>(
+      "SELECT * FROM User WHERE username = ?",
+      ["admin"]
     );
-    console.log("✅ Admin user password hashed");
+
+    if (admin && admin.password_hash === "temp_hash") {
+      console.log("🔐 Hashing admin password...");
+      // Replace temp admin with properly hashed password
+      const salt = await generateSalt();
+      const hash = await hashPassword("admin", salt);
+
+      await database.runAsync(
+        "UPDATE User SET password_hash = ?, password_salt = ? WHERE id = ?",
+        [hash, salt, admin.id]
+      );
+      console.log("✅ Admin user password hashed");
+    } else {
+      console.log("✅ Admin user already exists with hashed password");
+    }
+  } catch (error) {
+    console.error("❌ Failed to initialize admin user:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Admin initialization failed: ${errorMessage}`);
   }
 }
 

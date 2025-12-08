@@ -38,10 +38,14 @@ export const useAuthStore = create<AuthState>()(
       sessionId: null,
 
       initializeDB: async () => {
+        console.log("[AuthStore] Starting database initialization");
         try {
           await initDatabase();
+          console.log("[AuthStore] Database initialized successfully");
         } catch (error) {
-          console.error("Failed to initialize database:", error);
+          console.error("[AuthStore] Failed to initialize database:", error);
+          // Re-throw the error so App.tsx can catch it
+          throw error;
         }
       },
 

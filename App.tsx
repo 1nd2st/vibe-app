@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "./src/state/authStore";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 
 // Collection screens (existing)
 import { RootStackParamList } from "./src/navigation/RootNavigator";
@@ -67,29 +68,38 @@ export default function App() {
   const { isAuthenticated, initializeDB } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initAttempts, setInitAttempts] = useState(0);
 
   useEffect(() => {
     // Initialize database on app start
     const initialize = async () => {
       try {
+        console.log(`[APP] Initialization attempt ${initAttempts + 1}`);
         await initializeDB();
+        console.log("[APP] Database initialized successfully");
         setIsReady(true);
+        setError(null);
       } catch (err) {
-        console.error("Failed to initialize app:", err);
-        setError(err instanceof Error ? err.message : "Failed to initialize app");
-        // Set ready anyway to prevent infinite loading
+        console.error("[APP] Failed to initialize app:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to initialize app";
+        console.error("[APP] Error details:", errorMessage);
+        setError(errorMessage);
+        // Set ready anyway to show error screen instead of infinite loading
         setIsReady(true);
       }
     };
 
     initialize();
-  }, []);
+  }, [initAttempts]);
 
   if (!isReady) {
     // Show a minimal loading screen
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
-        <Text style={{ fontSize: 18, color: "#000" }}>Loading...</Text>
+        <Text style={{ fontSize: 18, color: "#000", marginBottom: 10 }}>Loading...</Text>
+        <Text style={{ fontSize: 12, color: "#666", textAlign: "center", paddingHorizontal: 20 }}>
+          Initializing database...
+        </Text>
       </View>
     );
   }
@@ -101,121 +111,115 @@ export default function App() {
         <Text style={{ fontSize: 18, fontWeight: "bold", color: "#d32f2f", marginBottom: 10 }}>
           Initialization Error
         </Text>
-        <Text style={{ fontSize: 14, color: "#666", textAlign: "center" }}>
+        <Text style={{ fontSize: 14, color: "#666", textAlign: "center", marginBottom: 20 }}>
           {error}
         </Text>
         <Pressable
           onPress={() => {
+            console.log("[APP] User requested retry");
             setError(null);
             setIsReady(false);
-            setTimeout(() => {
-              const initialize = async () => {
-                try {
-                  await initializeDB();
-                  setIsReady(true);
-                } catch (err) {
-                  console.error("Failed to initialize app:", err);
-                  setError(err instanceof Error ? err.message : "Failed to initialize app");
-                  setIsReady(true);
-                }
-              };
-              initialize();
-            }, 100);
+            setInitAttempts((prev) => prev + 1);
           }}
-          style={{ marginTop: 20, backgroundColor: "#2196F3", padding: 12, borderRadius: 8 }}
+          style={{ backgroundColor: "#2196F3", padding: 12, borderRadius: 8, marginBottom: 10 }}
         >
-          <Text style={{ color: "#fff", fontSize: 16 }}>Retry</Text>
+          <Text style={{ color: "#fff", fontSize: 16 }}>Retry Initialization</Text>
         </Pressable>
+        <Text style={{ fontSize: 11, color: "#999", textAlign: "center", marginTop: 10 }}>
+          Attempt: {initAttempts + 1}
+        </Text>
       </View>
     );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ActionSheetProvider>
-          <NavigationContainer>
-            <Stack.Navigator
-              initialRouteName={isAuthenticated ? "Home" : "Login"}
-              screenOptions={{
-                headerShown: false,
-                animation: "default",
-              }}
-            >
-              {!isAuthenticated ? (
-                // Auth screens
-                <Stack.Screen name="Login">
-                  {(props) => (
-                    <LoginScreen
-                      {...props}
-                      onLoginSuccess={() => {
-                        // Navigation will handle automatically via state
-                      }}
-                    />
-                  )}
-                </Stack.Screen>
-              ) : (
-                <>
-                  {/* Home and Inventory Management screens */}
-                  <Stack.Screen name="Home" component={HomeScreen} />
-                  <Stack.Screen name="InventoryMenu" component={InventoryMenuScreen} />
-                  <Stack.Screen name="ScanPutAway" component={ScanPutAwayScreen} />
-                  <Stack.Screen name="SearchItem" component={SearchItemScreen} />
-                  <Stack.Screen name="InventoryItemDetail" component={InventoryItemDetailScreen} />
-                  <Stack.Screen name="BrowseLocations" component={BrowseLocationsScreen} />
-                  <Stack.Screen name="UserManagement" component={UserManagementScreen} />
-                  <Stack.Screen name="PasswordPolicy" component={PasswordPolicyScreen} />
-                  <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ActionSheetProvider>
+            <NavigationContainer>
+              <Stack.Navigator
+                initialRouteName={isAuthenticated ? "Home" : "Login"}
+                screenOptions={{
+                  headerShown: false,
+                  animation: "default",
+                }}
+              >
+                {!isAuthenticated ? (
+                  // Auth screens
+                  <Stack.Screen name="Login">
+                    {(props) => (
+                      <LoginScreen
+                        {...props}
+                        onLoginSuccess={() => {
+                          // Navigation will handle automatically via state
+                        }}
+                      />
+                    )}
+                  </Stack.Screen>
+                ) : (
+                  <>
+                    {/* Home and Inventory Management screens */}
+                    <Stack.Screen name="Home" component={HomeScreen} />
+                    <Stack.Screen name="InventoryMenu" component={InventoryMenuScreen} />
+                    <Stack.Screen name="ScanPutAway" component={ScanPutAwayScreen} />
+                    <Stack.Screen name="SearchItem" component={SearchItemScreen} />
+                    <Stack.Screen name="InventoryItemDetail" component={InventoryItemDetailScreen} />
+                    <Stack.Screen name="BrowseLocations" component={BrowseLocationsScreen} />
+                    <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+                    <Stack.Screen name="PasswordPolicy" component={PasswordPolicyScreen} />
+                    <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
 
-                  {/* Collection screens (existing) */}
-                  <Stack.Screen name="Customers" component={CustomersScreen} />
-                  <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
-                  <Stack.Screen name="Collections" component={CollectionsScreen} />
-                  <Stack.Screen
-                    name="NewCollection"
-                    component={NewCollectionScreen}
-                    options={{ presentation: "card" }}
-                  />
-                  <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
-                  <Stack.Screen
-                    name="AddItem"
-                    component={AddItemScreen}
-                    options={{ presentation: "modal" }}
-                  />
-                  <Stack.Screen
-                    name="Camera"
-                    component={CameraScreen}
-                    options={{ presentation: "fullScreenModal" }}
-                  />
-                  <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
-                  <Stack.Screen
-                    name="PhotoAnnotation"
-                    component={PhotoAnnotationScreen}
-                    options={{ presentation: "fullScreenModal" }}
-                  />
-                  <Stack.Screen
-                    name="QRCodeDisplay"
-                    component={QRCodeDisplayScreen}
-                    options={{ presentation: "modal" }}
-                  />
-                  <Stack.Screen
-                    name="SignCollection"
-                    component={SignCollectionScreen}
-                    options={{ presentation: "modal" }}
-                  />
-                  <Stack.Screen name="Settings" component={SettingsScreen} />
-                  <Stack.Screen
-                    name="QRScanner"
-                    component={QRScannerScreen}
-                    options={{ presentation: "fullScreenModal" }}
-                  />
-                </>
-              )}
-            </Stack.Navigator>
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </ActionSheetProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+                    {/* Collection screens (existing) */}
+                    <Stack.Screen name="Customers" component={CustomersScreen} />
+                    <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
+                    <Stack.Screen name="Collections" component={CollectionsScreen} />
+                    <Stack.Screen
+                      name="NewCollection"
+                      component={NewCollectionScreen}
+                      options={{ presentation: "card" }}
+                    />
+                    <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
+                    <Stack.Screen
+                      name="AddItem"
+                      component={AddItemScreen}
+                      options={{ presentation: "modal" }}
+                    />
+                    <Stack.Screen
+                      name="Camera"
+                      component={CameraScreen}
+                      options={{ presentation: "fullScreenModal" }}
+                    />
+                    <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
+                    <Stack.Screen
+                      name="PhotoAnnotation"
+                      component={PhotoAnnotationScreen}
+                      options={{ presentation: "fullScreenModal" }}
+                    />
+                    <Stack.Screen
+                      name="QRCodeDisplay"
+                      component={QRCodeDisplayScreen}
+                      options={{ presentation: "modal" }}
+                    />
+                    <Stack.Screen
+                      name="SignCollection"
+                      component={SignCollectionScreen}
+                      options={{ presentation: "modal" }}
+                    />
+                    <Stack.Screen name="Settings" component={SettingsScreen} />
+                    <Stack.Screen
+                      name="QRScanner"
+                      component={QRScannerScreen}
+                      options={{ presentation: "fullScreenModal" }}
+                    />
+                  </>
+                )}
+              </Stack.Navigator>
+              <StatusBar style="auto" />
+            </NavigationContainer>
+          </ActionSheetProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
